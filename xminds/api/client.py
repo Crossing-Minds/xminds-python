@@ -33,19 +33,19 @@ def require_login(method):
 
 class CrossingMindsApiClient:
 
-    def __init__(self, environment=None, serializer='pkl'):
+    def __init__(self, serializer='pkl', **api_kwargs):
         self._database = None
         self._refresh_token = None
         self.auto_refresh_token = True
-        if serializer == 'pkl':
+        if serializer.lower() in ['pkl', 'pickle']:
             cls = CrossingMindsApiPythonRequest
             self.b64_encode_bytes = False
-        elif serializer == 'json':
+        elif serializer.lower() == 'json':
             cls = CrossingMindsApiJsonRequest
             self.b64_encode_bytes = True
         else:
             raise NotImplementedError(f'unknown serializer {serializer}')
-        self.api = cls(environment=environment)
+        self.api = cls(**api_kwargs)
 
     # === Account ===
 

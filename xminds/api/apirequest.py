@@ -1,5 +1,4 @@
 import json
-import os
 import pickle
 import requests
 
@@ -19,7 +18,7 @@ class _BaseCrossingMindsApiRequest:
 
     def __init__(self, host=None, api_version=None, headers=None):
         self.host = host or self.HOST
-        headers = dict(self.HEADERS, **headers)
+        headers = dict(self.HEADERS, **headers or {})
         self.api_version = api_version or self.API_VERSION
         self.session = requests.Session()
         self.session.headers.update(headers)
