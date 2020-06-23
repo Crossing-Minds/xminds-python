@@ -1,3 +1,13 @@
+"""
+xminds.api.apirequest
+~~~~~~~~~~~~~~~~~~~~~
+
+This module implements the low level request logic of Crossing Minds API:
+* headers and JTW token autentication
+* serialization
+* translation from HTTP status code to XMindsError
+"""
+
 import json
 import pickle
 import requests

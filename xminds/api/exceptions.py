@@ -1,3 +1,10 @@
+"""
+xminds.api.exceptions
+~~~~~~~~~~~~~~~~~~~~~
+
+This module defines all custom API exceptions.
+All exceptions inherit from `XMindsError`.
+"""
 
 class XMindsError(Exception):
     """ Base class for all Crossing Minds Exceptions """
