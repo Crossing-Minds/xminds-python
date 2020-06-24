@@ -50,9 +50,9 @@ class CrossingMindsApiClient:
     # === Account ===
 
     @require_login
-    def create_account(self, first_name, last_name, email, password):
+    def create_individual_account(self, first_name, last_name, email, password, role='backend'):
         """
-        Create a new account
+        Create a new individual account
 
         :param str first_name:
         :param str last_name:
@@ -60,12 +60,31 @@ class CrossingMindsApiClient:
         :param str password:
         :returns: {'id': int}
         """
-        path = 'accounts/create/'
+        path = 'accounts/individual/'
         data = {
             'first_name': first_name,
             'last_name': last_name,
             'email': email,
             'password': password,
+            'role': role,
+        }
+        return self.api.post(path=path, data=data)
+
+    @require_login
+    def create_service_account(self, name, password, role='frontend'):
+        """
+        Create a new service account
+
+        :param str name:
+        :param str password:
+        :param str? role:
+        :returns: {'id': int}
+        """
+        path = 'accounts/service/'
+        data = {
+            'name': name,
+            'password': password,
+            'role': role,
         }
         return self.api.post(path=path, data=data)
 
@@ -94,13 +113,14 @@ class CrossingMindsApiClient:
 
     # === Login ===
 
-    def login(self, email, password, db_id):
+    def login_individual(self, email, password, db_id, frontend_user_id=None):
         """
         Login on a database with an account
 
         :param str email:
         :param str password:
         :param int db_id:
+        :param ID? frontend_user_id: user ID
         :returns: {
             'token': str,
             'database': {
@@ -112,18 +132,40 @@ class CrossingMindsApiClient:
             },
         }
         """
-        path = 'login/'
+        path = 'login/individual/'
         data = {
             'email': email,
             'password': password,
             'db_id': db_id,
         }
-        resp = self.api.post(path=path, data=data)
-        jwt_token = resp['token']
-        self.set_jwt_token(jwt_token)
-        self._database = resp['database']
-        self._refresh_token = resp['refresh_token']
-        return resp
+        return self._login(path, data, frontend_user_id)
+
+    def login_service(self, name, password, db_id, frontend_user_id=None):
+        """
+        Login on a database with a service account
+
+        :param str name:
+        :param str password:
+        :param int db_id:
+        :param ID? frontend_user_id: user ID
+        :returns: {
+            'token': str,
+            'database': {
+                'id': int,
+                'name': str,
+                'description': str,
+                'item_id_type': str,
+                'user_id_type': str,
+            },
+        }
+        """
+        path = 'login/service/'
+        data = {
+            'name': name,
+            'password': password,
+            'db_id': db_id,
+        }
+        return self._login(path, data, frontend_user_id)
 
     def login_root(self, email, password):
         """
@@ -168,6 +210,11 @@ class CrossingMindsApiClient:
         data = {
             'refresh_token': refresh_token
         }
+        return self._login(path, data, None)
+
+    def _login(self, path, data, frontend_user_id):
+        if frontend_user_id:
+            data['frontend_user_id'] = frontend_user_id
         resp = self.api.post(path=path, data=data)
         jwt_token = resp['token']
         self.set_jwt_token(jwt_token)
@@ -249,7 +296,7 @@ class CrossingMindsApiClient:
                     print(f'\rready in {print_time}    ')
                 return
             if verbose:
-                print(f'\rwaiting... {print_time} {spinner[i%len(spinner)]} ', end='')
+                print(f'\rwaiting... {print_time} {spinner[i%len(spinner)]}    ', end='')
                 sys.stdout.flush()
         if verbose:
             print('')

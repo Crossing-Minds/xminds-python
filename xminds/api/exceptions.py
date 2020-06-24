@@ -107,6 +107,12 @@ class AuthRefreshTokenExpired(BaseAuthError):
     MSG = 'The refresh token has expired'
     CODE = 28
 
+
+class WrongAccountType(BaseAuthError):
+    MSG = 'Does not match the account type'
+    CODE = 29
+
+
 # === Request Errors ===
 
 
@@ -124,8 +130,8 @@ class MalformedData(BaseRequestError):
     CODE = 41
 
 
-class DuplicatedEmail(BaseRequestError):
-    MSG = 'The email {email} already exists'
+class DuplicatedName(BaseRequestError):
+    MSG = 'The name {name} already exists'
     CODE = 42
 
 
@@ -135,13 +141,35 @@ class DuplicatedOrganization(BaseRequestError):
 
 
 class AccountVerified(BaseRequestError):
-    MSG = 'The account {email} has already been verified'
+    MSG = 'The account {name} has already been verified'
     CODE = 44
 
 
 class NoDatabaseSelected(BaseRequestError):
     MSG = 'There is no database assigned to the token. Check the db_id at login.'
     CODE = 45
+
+
+class DuplicatedProperty(BaseRequestError):
+    MSG = 'Property {name} already exists'
+    CODE = 46
+
+
+
+# === Forbidden Errors ===
+
+class ForbiddenError(XMindsError):
+    HTTP_STATUS = 403
+
+
+class ResourcesForbidden(ForbiddenError):
+    MSG = 'Do not have enough permissions to access this resource'
+    CODE = 50
+
+
+class FrontendUserResourcesForbidden(ForbiddenError):
+    MSG = 'The user registered during the login cannot access the user resources in the request'
+    CODE = 51
 
 
 # === Resource Errors ===
