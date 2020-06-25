@@ -58,7 +58,7 @@ class CrossingMindsApiClient:
         :param str last_name:
         :param str email:
         :param str password:
-        :returns: {'id': int}
+        :returns: {'id': str}
         """
         path = 'accounts/individual/'
         data = {
@@ -78,7 +78,7 @@ class CrossingMindsApiClient:
         :param str name:
         :param str password:
         :param str? role:
-        :returns: {'id': int}
+        :returns: {'id': str}
         """
         path = 'accounts/service/'
         data = {
@@ -119,12 +119,12 @@ class CrossingMindsApiClient:
 
         :param str email:
         :param str password:
-        :param int db_id:
+        :param str db_id:
         :param ID? frontend_user_id: user ID
         :returns: {
             'token': str,
             'database': {
-                'id': int,
+                'id': str,
                 'name': str,
                 'description': str,
                 'item_id_type': str,
@@ -146,12 +146,12 @@ class CrossingMindsApiClient:
 
         :param str name:
         :param str password:
-        :param int db_id:
+        :param str db_id:
         :param ID? frontend_user_id: user ID
         :returns: {
             'token': str,
             'database': {
-                'id': int,
+                'id': str,
                 'name': str,
                 'description': str,
                 'item_id_type': str,
@@ -197,7 +197,7 @@ class CrossingMindsApiClient:
         :returns: {
             'token': str,
             'database': {
-                'id': int,
+                'id': str,
                 'name': str,
                 'description': str,
                 'item_id_type': str,
@@ -249,7 +249,7 @@ class CrossingMindsApiClient:
         Get details on current database
 
         :returns: {
-            'id': int,
+            'id': str,
             'name': str,
             'description': str,
             'item_id_type': str,
