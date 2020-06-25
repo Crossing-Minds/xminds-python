@@ -315,14 +315,14 @@ class CrossingMindsApiClient:
         return self.api.get(path=path)
 
     @require_login
-    def create_or_update_user_property(self, property_name, value_type, repeated=False):
+    def create_user_property(self, property_name, value_type, repeated=False):
         path = 'users-properties/'
         data = {
             'property_name': property_name,
             'value_type': value_type,
             'repeated': repeated,
         }
-        return self.api.put(path=path, data=data)
+        return self.api.post(path=path, data=data)
 
     # === User ===
 
