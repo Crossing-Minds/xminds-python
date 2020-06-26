@@ -328,12 +328,28 @@ class CrossingMindsApiClient:
 
     @require_login
     def get_user(self, user_id):
+        """
+        Get one user given its ID.
+
+        :param ID user_id: user ID
+        :returns: {
+            'item': {
+                'id': ID,
+                *<property_name: property_value>,
+            }
+        }
+        """
         user_id = self._userid2url(user_id)
         path = f'users/{user_id}/'
         return self.api.get(path=path)
 
     @require_login
     def create_or_update_user(self, user):
+        """
+        Create a new user, or update it if the ID already exists.
+
+        :param object user: user ID and properties {'id': ID, *<property_name: property_value>}
+        """
         path = 'users/'
         if self.b64_encode_bytes:
             user = dict(user, user_id=self._userid2url(user['user_id']))
@@ -343,16 +359,54 @@ class CrossingMindsApiClient:
         return self.api.put(path=path, data=data)
 
     @require_login
-    def create_or_update_users_bulk(self, users, users_m2m):
-        if self.b64_encode_bytes:
-            raise NotImplementedError('bulk is not implement for json serializer, '
-                                      'use pkl serializer instead')
+    def create_or_update_users_bulk(self, users, users_m2m=None, chunk_size=(1<<10)):
+        """
+        Create many users in bulk, or update the ones for which the id already exist.
+
+        :param array users: array with fields ['id': ID, *<property_name: value_type>]
+            contains only the non-repeated values,
+        :param array? users_m2m: object of arrays for repeated values:
+            {
+                *<repeated_property_name: {
+                    'name': str,
+                    'array': array with fields ['user_index': uint32, 'value_id': value_type],
+                }>
+            }
+        :param int? chunk_size: split the requests in chunks of this size (default: 1K)
+        """
+        users_m2m = users_m2m or []
+        # cast dict to list of dict
+        if isinstance(users_m2m, dict):
+            users_m2m = [{'name': name, 'array': array}
+                         for name, array in users_m2m.items()]
         path = 'users-bulk/'
-        data = {
-            'users': users,
-            'users_m2m': users_m2m,
-        }
-        return self.api.put(path=path, data=data, timeout=60)
+        n_chunks = int(numpy.ceil(len(users) / chunk_size))
+        for i in tqdm(range(n_chunks), disable=(True if n_chunks < 4 else None)):
+            start_idx = i * chunk_size
+            end_idx = (i+1) * chunk_size
+            users_chunk = users[start_idx:end_idx]
+            # split M2M array-optimized if any
+            users_m2m_chunk = []
+            for m2m in users_m2m:
+                array = m2m['array']
+                if isinstance(array, numpy.ndarray):
+                    mask = (array['user_index'] >= start_idx) & (array['user_index'] < end_idx)
+                    array_chunk = array[mask]  # does copy
+                    array_chunk['user_index'] -= start_idx
+                else:
+                    logging.warning('array-optimized many-to-many format is not efficient '
+                                    'with JSON. Use numpy arrays and pkl serializer instead')
+                    array_chunk = [
+                        {'user_index': row['user_index'] - start_idx, 'value_id': row['value_id']}
+                        for row in array
+                        if start_idx <= row['user_index'] < end_idx
+                    ]
+                users_m2m_chunk.append({'name': m2m['name'], 'array': array_chunk})
+            data = {
+                'users': users_chunk,
+                'users_m2m': users_m2m_chunk,
+            }
+            self.api.put(path=path, data=data, timeout=60)
 
     # === Item Property ===
 
