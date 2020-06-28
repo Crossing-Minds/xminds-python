@@ -244,6 +244,35 @@ class CrossingMindsApiClient:
         return self.api.post(path=path, data=data)
 
     @require_login
+    def get_all_databases(self, amt=None, page=None):
+        """
+        Get all databases on the current organization
+
+        :param int? amt: amount of databases by page (default: API default)
+        :param int? page: page number (default: 1)
+        :returns: {
+            'has_next': bool,
+            'next_page': int,
+            'databases': [
+                {
+                    'id': int,
+                    'name': str,
+                    'description': str,
+                    'item_id_type': str,
+                    'user_id_type': str,
+                },
+            ]
+        }
+        """
+        path = 'databases/'
+        params = {}
+        if amt:
+            params['amt'] = amt
+        if page:
+            params['page'] = page
+        return self.api.get(path=path, params=params)
+
+    @require_login
     def get_database(self):
         """
         Get details on current database
