@@ -313,7 +313,7 @@ class CrossingMindsApiClient:
         :param bool? verbose: whether to print ascii spinner (default: only on TTY)
         """
         # temporary: manually trigger training since it's not autoamtic yet
-        self.api.post(f'ml-triggers/retrain-models/')
+        self.api.post(f'ml-triggers/retrain-models/', data={})
         assert sleep > 0.1
         if verbose is None:
             verbose = sys.stdout.isatty()
