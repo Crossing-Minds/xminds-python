@@ -312,6 +312,8 @@ class CrossingMindsApiClient:
         :param int? sleep: time to wait between polling (default: 1s)
         :param bool? verbose: whether to print ascii spinner (default: only on TTY)
         """
+        # temporary: manually trigger training since it's not autoamtic yet
+        self.api.post(f'ml-triggers/retrain-models/')
         assert sleep > 0.1
         if verbose is None:
             verbose = sys.stdout.isatty()
