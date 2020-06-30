@@ -86,7 +86,7 @@ class WrongData(RequestError):
 
 
 class DuplicatedError(RequestError):
-    MSG = 'The {type} {id} is duplicated'
+    MSG = 'The {type} {key} is duplicated'
     CODE = 42
 
 
