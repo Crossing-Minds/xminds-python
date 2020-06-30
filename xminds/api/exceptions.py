@@ -57,167 +57,59 @@ class TooManyRequests(XMindsError):
 # === Authentication Errors ====
 
 
-class BaseAuthError(XMindsError):
+class AuthError(XMindsError):
     HTTP_STATUS = 401
-
-
-class MalformedAuthHeader(BaseAuthError):
-    MSG = 'Authorization header must contain the Bearer type'
-    CODE = 20
-
-
-class WrongAuthToken(BaseAuthError):
-    MSG = 'The token is corrupted'
+    MSG = 'Cannot perform authentication: {error}'
     CODE = 21
 
 
-class AuthTokenExpired(BaseAuthError):
-    MSG = 'The token has expired'
+class JwtTokenExpired(AuthError):
+    MSG = 'The JWT token has expired'
     CODE = 22
 
 
-class AuthTokenMissing(BaseAuthError):
-    MSG = 'Authorization token is required'
-    CODE = 23
-
-
-class WrongActivationCode(BaseAuthError):
-    MSG = ('The given code is invalid. Maybe you have generated a new '
-           'code, please check your email. You can also create a new one '
-           'and we will email it to you')
-    CODE = 24
-
-
-class AccountNotVerified(BaseAuthError):
-    MSG = 'Your account has not been verified yet. Please check your email'
-    CODE = 25
-
-
-class InvalidPassword(BaseAuthError):
-    MSG = 'Invalid password'
-    CODE = 26
-
-
-class WrongAuthRefreshToken(BaseAuthError):
-    MSG = 'The refresh token is invalid'
-    CODE = 27
-
-
-class AuthRefreshTokenExpired(BaseAuthError):
+class RefreshTokenExpired(AuthError):
     MSG = 'The refresh token has expired'
     CODE = 28
-
-
-class WrongAccountType(BaseAuthError):
-    MSG = 'Does not match the account type'
-    CODE = 29
 
 
 # === Request Errors ===
 
 
-class BaseRequestError(XMindsError):
+class RequestError(XMindsError):
     HTTP_STATUS = 400
 
 
-class WrongData(BaseRequestError):
+class WrongData(RequestError):
     MSG = 'There is an error in the submitted data'
     CODE = 40
 
 
-class MalformedData(BaseRequestError):
-    MSG = 'Request data cannot be parsed: {error}'
-    CODE = 41
-
-
-class DuplicatedName(BaseRequestError):
-    MSG = 'The name {name} already exists'
+class DuplicatedError(RequestError):
+    MSG = 'The {type} {id} is duplicated'
     CODE = 42
 
 
-class DuplicatedOrganization(BaseRequestError):
-    MSG = 'The organization {name} already exists'
-    CODE = 43
-
-
-class AccountVerified(BaseRequestError):
-    MSG = 'The account {name} has already been verified'
-    CODE = 44
-
-
-class NoDatabaseSelected(BaseRequestError):
-    MSG = 'There is no database assigned to the token. Check the db_id at login.'
-    CODE = 45
-
-
-class DuplicatedProperty(BaseRequestError):
-    MSG = 'Property {name} already exists'
-    CODE = 46
-
-
-
-# === Forbidden Errors ===
-
 class ForbiddenError(XMindsError):
     HTTP_STATUS = 403
-
-
-class ResourcesForbidden(ForbiddenError):
-    MSG = 'Do not have enough permissions to access this resource'
+    MSG = 'Do not have enough permissions to access this resource: {error}'
     CODE = 50
 
-
-class FrontendUserResourcesForbidden(ForbiddenError):
-    MSG = 'The user registered during the login cannot access the user resources in the request'
-    CODE = 51
 
 
 # === Resource Errors ===
 
 
-class BaseNotFoundError(XMindsError):
+class NotFoundError(XMindsError):
     HTTP_STATUS = 404
-
-
-class ItemNotFound(BaseNotFoundError):
-    MSG = 'The item {item_id} does not exist'
+    MSG = 'The {type} {key} does not exist'
     CODE = 60
-
-
-class UserNotFound(BaseNotFoundError):
-    MSG = 'The user {user_id} does not exist'
-    CODE = 61
-
-
-class RatingNotFound(BaseNotFoundError):
-    MSG = 'The rating for user {user_id} and item {item_id} does not exist'
-    CODE = 62
-
-
-class OrganizationNotFound(BaseNotFoundError):
-    MSG = 'The organization {org_id} does not exist'
-    CODE = 63
-
-
-class AccountNotFound(BaseNotFoundError):
-    MSG = 'The account {email} does not exist'
-    CODE = 64
-
-
-class DatabaseNotFound(BaseNotFoundError):
-    MSG = 'The database {db_id} does not exist'
-    CODE = 65
 
 
 class MethodNotAllowed(XMindsError):
     HTTP_STATUS = 405
     MSG = 'Method "{method}" not allowed'
     CODE = 70
-
-class DatabaseNotReady(XMindsError):
-    HTTP_STATUS = 503
-    MSG = 'The database {db_id} is not ready. Wait using /status/'
-    CODE = 80
 
 
 # === Utils to build exception from code ===

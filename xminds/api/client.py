@@ -15,7 +15,7 @@ import time
 
 from ..compat import tqdm
 from .apirequest import CrossingMindsApiJsonRequest, CrossingMindsApiPythonRequest
-from .exceptions import AuthTokenExpired
+from .exceptions import JwtTokenExpired
 
 
 def require_login(method):
@@ -23,7 +23,7 @@ def require_login(method):
     def wrapped(self, *args, **kwargs):
         try:
             return method(self, *args, **kwargs)
-        except AuthTokenExpired:
+        except JwtTokenExpired:
             if not self._refresh_token or not self.auto_refresh_token:
                 raise
             self.login_refresh_token()
