@@ -312,8 +312,6 @@ class CrossingMindsApiClient:
         :param int? sleep: time to wait between polling (default: 1s)
         :param bool? verbose: whether to print ascii spinner (default: only on TTY)
         """
-        # temporary: manually trigger training since it's not autoamtic yet
-        self.api.post(f'ml-triggers/retrain-models/', data={})
         assert sleep > 0.1
         if verbose is None:
             verbose = sys.stdout.isatty()
@@ -608,7 +606,7 @@ class CrossingMindsApiClient:
         :param ID item_id: item ID
         :param int? amt: amount to return (default: use the API default)
         :returns: {
-            'items_id': array of items IDs
+            'items_id': array of items IDs,
         }
         """
         item_id = self._itemid2url(item_id)
@@ -621,14 +619,16 @@ class CrossingMindsApiClient:
     # === Reco: Session-to-item ===
 
     @require_login
-    def get_reco_session_to_items(self, ratings, amt=None):
+    def get_reco_session_to_items(self, ratings, amt=None, cursor=None):
         """
         Get items recommendations given the ratings of an anonymous session.
 
         :param array ratings: ratings array with fields ['item_id': ID, 'rating': float]
         :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
         :returns: {
-            'items_id': array of items IDs
+            'items_id': array of items IDs,
+            'next_cursor': str, pagination cursor to use in next request to get more items,
         }
         """
         path = f'recommendation/sessions/items/'
@@ -637,19 +637,23 @@ class CrossingMindsApiClient:
         }
         if amt:
             data['amt'] = amt
+        if cursor:
+            data['cursor'] = cursor
         return self.api.post(path=path, data=data)
 
     # === Reco: User-to-item ===
 
     @require_login
-    def get_reco_user_to_items(self, user_id, amt=None):
+    def get_reco_user_to_items(self, user_id, amt=None, cursor=None):
         """
         Get items recommendations given a user ID.
 
         :param ID user_id: user ID
         :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
         :returns: {
-            'items_id': array of items IDs
+            'items_id': array of items IDs,
+            'next_cursor': str, pagination cursor to use in next request to get more items,
         }
         """
         user_id = self._userid2url(user_id)
@@ -657,6 +661,8 @@ class CrossingMindsApiClient:
         params = {}
         if amt:
             params['amt'] = amt
+        if cursor:
+            params['cursor'] = cursor
         return self.api.get(path=path, params=params)
 
     # === User Ratings ===
