@@ -15,7 +15,7 @@ import time
 
 from ..compat import tqdm
 from .apirequest import CrossingMindsApiJsonRequest, CrossingMindsApiPythonRequest
-from .exceptions import JwtTokenExpired
+from .exceptions import JwtTokenExpired, ServerError
 
 
 def require_login(method):
@@ -322,10 +322,15 @@ class CrossingMindsApiClient:
             resp = self.status()
             if resp['status'] == 'ready':
                 if verbose:
-                    print(f'\rready in {print_time}    ')
+                    print(f"\rready in {print_time:80s}")
                 return
             if verbose:
-                print(f'\rwaiting... {print_time} {spinner[i%len(spinner)]}    ', end='')
+                msg = self._get_latest_task_progress_message(
+                    task_name='ml_model_retrain',
+                    default='',
+                    default_running='starting to train ML models',
+                    default_failed='ML models training failed')
+                print(f"\rwaiting... {print_time} {spinner[i%len(spinner)]} {msg:80s}", end='')
                 sys.stdout.flush()
         if verbose:
             print('')
@@ -760,6 +765,36 @@ class CrossingMindsApiClient:
         path = f'users/{user_id}/ratings/{item_id}'
         return self.api.delete(path=path)
 
+    # === Scheduled Background Tasks ===
+
+    @require_login
+    def trigger_background_task(self, task_name):
+        """
+        Trigger background task such as retraining of ML models.
+        You should not have to call this endpoint yourself, as this is done automatically.
+
+        :param str task_name: for instance `'ml_model_retrain'`
+        """
+        path = f'tasks/{task_name}/'
+        return self.api.post(path=path)
+
+    @require_login
+    def get_background_tasks(self, task_name):
+        """
+        List currently running background tasks such as ML models training.
+
+        :param str task_name: for instance `'ml_model_retrain'`
+        :returns: {
+            'tasks': [{
+                'name': string, Task name
+                'start_time': int, Start timestamp
+                'details': dict, Execution details, like progress message
+            }],
+        }
+        """
+        path = f'tasks/{task_name}/recents/'
+        return self.api.get(path=path)
+
     # === Utils ===
 
     def clear_jwt_token(self):
@@ -786,3 +821,15 @@ class CrossingMindsApiClient:
 
     def _b64(self, data):
         return base64.urlsafe_b64encode(data).replace(b'=', b'').decode('ascii')
+
+    def _get_latest_task_progress_message(self, task_name,
+                                          default=None, default_running=None, default_failed=None):
+        tasks = self.get_background_tasks(task_name)['tasks']
+        if not tasks:
+            return default
+        latest_task = max(tasks, key=lambda t: t['start_time'])
+        if latest_task['status'] == 'RUNNING':
+            return latest_task.get('progress', default_running)
+        if latest_task['status'] == 'FAILED':
+            raise ServerError({'error': latest_task.get('error', default_failed)})
+        return latest_task['status']
