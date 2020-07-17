@@ -809,13 +809,13 @@ class CrossingMindsApiClient:
 
     def _userid2url(self, user_id):
         """ base64 encode if needed """
-        if self._database['user_id_type'].startswith('S'):
+        if self._database['user_id_type'].startswith('bytes'):
             return self._b64(user_id)
         return user_id
 
     def _itemid2url(self, item_id):
         """ base64 encode if needed """
-        if self._database['item_id_type'].startswith('S'):
+        if self._database['item_id_type'].startswith('bytes'):
             return self._b64(item_id)
         return item_id
 
