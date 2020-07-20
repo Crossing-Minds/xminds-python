@@ -109,7 +109,7 @@ class CrossingMindsApiClient:
             'code': code,
             'email': email,
         }
-        return self.api.post(path=path, data=data)
+        return self.api.get(path=path, params=data)
 
     # === Login ===
 
