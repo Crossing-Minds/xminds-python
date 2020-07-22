@@ -12,11 +12,9 @@ import json
 import pickle
 import requests
 
+from .. import __version__
 from ..compat import PYV
 from .exceptions import ServerError, XMindsError
-
-
-CLIENT_VERSION = 'v1.0'
 
 
 class _BaseCrossingMindsApiRequest:
@@ -108,7 +106,7 @@ class _BaseCrossingMindsApiRequest:
 
 class CrossingMindsApiJsonRequest(_BaseCrossingMindsApiRequest):
     HEADERS = {
-        'User-Agent': f'CrossingMinds/{CLIENT_VERSION} (Python/{PYV}; JSON)',
+        'User-Agent': f'CrossingMinds/{__version__} (Python/{PYV}; JSON)',
         'Content-type': 'application/json',
         'Accept': 'application/json',
     }
@@ -129,7 +127,7 @@ class CrossingMindsApiJsonRequest(_BaseCrossingMindsApiRequest):
 
 class CrossingMindsApiPythonRequest(_BaseCrossingMindsApiRequest):
     HEADERS = {
-        'User-Agent': f'CrossingMinds/{CLIENT_VERSION} (Python/{PYV}; pickle)',
+        'User-Agent': f'CrossingMinds/{__version__} (Python/{PYV}; pickle)',
         'Content-type': 'application/xminds-pkl',
         'Accept': 'application/xminds-pkl',
     }

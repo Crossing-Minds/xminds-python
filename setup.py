@@ -1,11 +1,14 @@
 import setuptools
 
+from xminds import __version__
+
+
 with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name='xminds',
-    version='0.0.1',
+    version=__version__,
     author='Crossing Minds, Inc',
     author_email='contact@crossingminds.com',
     description='Crossing Minds data science python library and API client',
