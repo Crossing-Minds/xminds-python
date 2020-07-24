@@ -60,7 +60,7 @@ class CrossingMindsApiClient:
         :param str password:
         :returns: {'id': str}
         """
-        path = 'accounts/individual/'
+        path = f'accounts/individual/'
         data = {
             'first_name': first_name,
             'last_name': last_name,
@@ -80,7 +80,7 @@ class CrossingMindsApiClient:
         :param str? role:
         :returns: {'id': str}
         """
-        path = 'accounts/service/'
+        path = f'accounts/service/'
         data = {
             'name': name,
             'password': password,
@@ -94,7 +94,7 @@ class CrossingMindsApiClient:
 
         :param str email:
         """
-        path = 'accounts/resend-verification-code/'
+        path = f'accounts/resend-verification-code/'
         return self.api.put(path=path, data={'email': email})
 
     def verify_account(self, code, email):
@@ -104,7 +104,7 @@ class CrossingMindsApiClient:
         :param str code:
         :param str email:
         """
-        path = 'accounts/verify/'
+        path = f'accounts/verify/'
         data = {
             'code': code,
             'email': email,
@@ -132,7 +132,7 @@ class CrossingMindsApiClient:
             },
         }
         """
-        path = 'login/individual/'
+        path = f'login/individual/'
         data = {
             'email': email,
             'password': password,
@@ -159,7 +159,7 @@ class CrossingMindsApiClient:
             },
         }
         """
-        path = 'login/service/'
+        path = f'login/service/'
         data = {
             'name': name,
             'password': password,
@@ -177,7 +177,7 @@ class CrossingMindsApiClient:
             'token': str,
         }
         """
-        path = 'login/root/'
+        path = f'login/root/'
         data = {
             'email': email,
             'password': password
@@ -206,7 +206,7 @@ class CrossingMindsApiClient:
         }
         """
         refresh_token = refresh_token or self._refresh_token
-        path = 'login/refresh-token/'
+        path = f'login/refresh-token/'
         data = {
             'refresh_token': refresh_token
         }
@@ -234,7 +234,7 @@ class CrossingMindsApiClient:
         :param str item_id_type: Item ID type
         :param str user_id_type: User ID type
         """
-        path = 'databases/'
+        path = f'databases/'
         data = {
             'name': name,
             'description': description,
@@ -264,7 +264,7 @@ class CrossingMindsApiClient:
             ]
         }
         """
-        path = 'databases/'
+        path = f'databases/'
         params = {}
         if amt:
             params['amt'] = amt
@@ -285,7 +285,7 @@ class CrossingMindsApiClient:
             'user_id_type': str,
         }
         """
-        path = 'databases/current/'
+        path = f'databases/current/'
         return self.api.get(path=path)
 
     @require_login
@@ -293,7 +293,7 @@ class CrossingMindsApiClient:
         """
         Delete current database.
         """
-        path = 'databases/current/'
+        path = f'databases/current/'
         return self.api.delete(path=path, timeout=29)
 
     @require_login
@@ -301,7 +301,7 @@ class CrossingMindsApiClient:
         """
         Get readiness status of current database.
         """
-        path = 'databases/current/status/'
+        path = f'databases/current/status/'
         return self.api.get(path=path)
 
     def wait_until_ready(self, timeout=600, sleep=1, verbose=None):
@@ -342,23 +342,61 @@ class CrossingMindsApiClient:
 
     @require_login
     def get_user_property(self, property_name):
+        """
+        Get one user-property.
+
+        :param str property_name: property name
+        :returns: {
+            'property_name': str,
+            'value_type': str,
+            'repeated': bool,
+        }
+        """
         path = f'users-properties/{property_name}/'
         return self.api.get(path=path)
 
     @require_login
     def list_user_properties(self):
-        path = 'users-properties/'
+        """
+        Get all user-properties for the current database.
+
+        :returns: {
+            'properties': [{
+                'property_name': str,
+                'value_type': str,
+                'repeated': bool,
+            }],
+        }
+        """
+        path = f'users-properties/'
         return self.api.get(path=path)
 
     @require_login
     def create_user_property(self, property_name, value_type, repeated=False):
-        path = 'users-properties/'
+        """
+        Create a new user-property.
+
+        :param str property_name: property name
+        :param str value_type: property type
+        :param bool? repeated: whether the property has many values (default: False)
+        """
+        path = f'users-properties/'
         data = {
             'property_name': property_name,
             'value_type': value_type,
             'repeated': repeated,
         }
         return self.api.post(path=path, data=data)
+
+    @require_login
+    def delete_user_property(self, property_name):
+        """
+        Delete an user-property given by its name
+
+        :param str property_name: property name
+        """
+        path = f'users-properties/{property_name}/'
+        return self.api.delete(path=path)
 
     # === User ===
 
@@ -384,11 +422,11 @@ class CrossingMindsApiClient:
         """
         Create a new user, or update it if the ID already exists.
 
-        :param object user: user ID and properties {'id': ID, *<property_name: property_value>}
+        :param object user: user ID and properties {'user_id': ID, *<property_name: property_value>}
         """
-        path = 'users/'
-        if self.b64_encode_bytes:
-            user = dict(user, user_id=self._userid2url(user['user_id']))
+        user = dict(user)
+        user_id = self._userid2url(user.pop('user_id'))
+        path = f'users/{user_id}/'
         data = {
             'user': user,
         }
@@ -415,7 +453,7 @@ class CrossingMindsApiClient:
         if isinstance(users_m2m, dict):
             users_m2m = [{'name': name, 'array': array}
                          for name, array in users_m2m.items()]
-        path = 'users-bulk/'
+        path = f'users-bulk/'
         n_chunks = int(numpy.ceil(len(users) / chunk_size))
         for i in tqdm(range(n_chunks), disable=(True if n_chunks < 4 else None)):
             start_idx = i * chunk_size
@@ -449,7 +487,7 @@ class CrossingMindsApiClient:
     @require_login
     def get_item_property(self, property_name):
         """
-        Get one item property.
+        Get one item-property.
 
         :param str property_name: property name
         :returns: {
@@ -464,7 +502,7 @@ class CrossingMindsApiClient:
     @require_login
     def list_item_properties(self):
         """
-        Get all items properties for the current database.
+        Get all item-properties for the current database.
 
         :returns: {
             'properties': [{
@@ -474,25 +512,35 @@ class CrossingMindsApiClient:
             }],
         }
         """
-        path = 'items-properties/'
+        path = f'items-properties/'
         return self.api.get(path=path)
 
     @require_login
     def create_item_property(self, property_name, value_type, repeated=False):
         """
-        Create a new item property.
+        Create a new item-property.
 
         :param str property_name: property name
         :param str value_type: property type
         :param bool? repeated: whether the property has many values (default: False)
         """
-        path = 'items-properties/'
+        path = f'items-properties/'
         data = {
             'property_name': property_name,
             'value_type': value_type,
             'repeated': repeated,
         }
         return self.api.post(path=path, data=data)
+
+    @require_login
+    def delete_item_property(self, property_name):
+        """
+        Delete an item-property given by its name
+
+        :param str property_name: property name
+        """
+        path = f'items-properties/{property_name}/'
+        return self.api.delete(path=path)
 
     # === Item ===
 
@@ -543,11 +591,11 @@ class CrossingMindsApiClient:
         """
         Create a new item, or update it if the ID already exists.
 
-        :param object item: item ID and properties {'id': ID, *<property_name: property_value>}
+        :param object item: item ID and properties {'item_id': ID, *<property_name: property_value>}
         """
-        path = 'items/'
-        if self.b64_encode_bytes:
-            item = dict(item, item_id=self._itemid2url(item['item_id']))
+        item = dict(item)
+        item_id = self._itemid2url(item.pop('item_id'))
+        path = f'items/{item_id}/'
         data = {
             'item': item,
         }
@@ -574,7 +622,7 @@ class CrossingMindsApiClient:
         if isinstance(items_m2m, dict):
             items_m2m = [{'name': name, 'array': array}
                          for name, array in items_m2m.items()]
-        path = 'items-bulk/'
+        path = f'items-bulk/'
         n_chunks = int(numpy.ceil(len(items) / chunk_size))
         for i in tqdm(range(n_chunks), disable=(True if n_chunks < 4 else None)):
             start_idx = i * chunk_size
