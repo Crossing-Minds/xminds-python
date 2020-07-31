@@ -304,40 +304,6 @@ class CrossingMindsApiClient:
         path = f'databases/current/status/'
         return self.api.get(path=path)
 
-    def wait_until_ready(self, timeout=600, sleep=1, verbose=None):
-        """
-        Wait until the current database status is ready.
-
-        :param int? timeout: maximum time to wait, raise RuntimeError if exceeded (default: 10min)
-        :param int? sleep: time to wait between polling (default: 1s)
-        :param bool? verbose: whether to print ascii spinner (default: only on TTY)
-        """
-        assert sleep > 0.1
-        if verbose is None:
-            verbose = sys.stdout.isatty()
-        spinner = '|/-\\'
-        time_start = time.time()
-        for i in range(int(numpy.ceil(float(timeout) / sleep))):
-            time.sleep(sleep)
-            time_waited = time.time() - time_start
-            print_time = f'{int(time_waited) // 60:d}m{int(time_waited) % 60:02d}s'
-            resp = self.status()
-            if resp['status'] == 'ready':
-                if verbose:
-                    print(f"\rready in {print_time:80s}")
-                return
-            if verbose:
-                msg = self._get_latest_task_progress_message(
-                    task_name='ml_model_retrain',
-                    default='',
-                    default_running='starting to train ML models',
-                    default_failed='ML models training failed')
-                print(f"\rwaiting... {print_time} {spinner[i%len(spinner)]} {msg:80s}", end='')
-                sys.stdout.flush()
-        if verbose:
-            print('')
-        raise RuntimeError(f'API not ready before {timeout}s. Last response: {resp}')
-
     # === User Property ===
 
     @require_login
@@ -759,9 +725,9 @@ class CrossingMindsApiClient:
         :param array ratings: ratings array with fields:
             ['item_id': ID, 'rating': float, 'timestamp': float]
         """
-        path = f'ratings-bulk/'
+        user_id = self._userid2url(user_id)
+        path = f'users/{user_id}/ratings/'
         data = {
-            'user_id': user_id,
             'ratings': ratings,
         }
         return self.api.put(path=path, data=data, timeout=10)
@@ -830,9 +796,14 @@ class CrossingMindsApiClient:
         You should not have to call this endpoint yourself, as this is done automatically.
 
         :param str task_name: for instance `'ml_model_retrain'`
+        :returns: {
+            'task_id': str,
+        }
+        :raises: DuplicatedError with error name 'TASK_ALREADY_RUNNING'
+            if this task is already running
         """
         path = f'tasks/{task_name}/'
-        return self.api.post(path=path)
+        return self.api.post(path=path, data={})
 
     @require_login
     def get_background_tasks(self, task_name):
@@ -850,6 +821,106 @@ class CrossingMindsApiClient:
         """
         path = f'tasks/{task_name}/recents/'
         return self.api.get(path=path)
+
+    def wait_until_ready(self, timeout=600, sleep=1):
+        """
+        Wait until the current database status is ready, meaning at least one model has been trained
+
+        :param int? timeout: maximum time to wait, raise RuntimeError if exceeded (default: 10min)
+        :param int? sleep: time to wait between polling (default: 1s)
+        """
+        assert sleep > 0.1
+        resp = None
+        time_start = time.time()
+        while time.time() - time_start < timeout:
+            time.sleep(sleep)
+            resp = self.status()
+            if resp['status'] == 'ready':
+                return
+        raise RuntimeError(f'API not ready before {timeout}s. Last response: {resp}')
+
+    @require_login
+    def trigger_and_wait_background_task(self, task_name, timeout=600, lock_wait_timeout=None,
+                                         sleep=1, verbose=None):
+        """
+        Trigger background task such as retraining of ML models.
+        You don't necessarily have to call this endpoint yourself,
+        model training is also triggered automatically.
+        By default this waits for an already running task before triggering the new one
+
+        :param str task_name: for instance `'ml_model_retrain'`
+        :param int? timeout: maximum time to wait after the new task is triggered (default: 10min)
+        :param int? lock_wait_timeout: if another task is already running, maximum time to wait
+            for it to finish before triggering the new task (default: `timeout`)
+        :param int? sleep: time to wait between polling (default: 1s)
+        :returns: {
+            'task_id': str,
+        }
+        :raises: RuntimeError if either `timeout` or `lock_wait_timeout` is reached
+        """
+        assert sleep > 0.1
+        if lock_wait_timeout is None:
+            lock_wait_timeout = timeout
+        if verbose is None:
+            verbose = sys.stdout.isatty()
+        # wait for already running task (if any)
+        if lock_wait_timeout > 0:
+            msg = 'waiting for already running...' if verbose else None
+            self.wait_for_background_task(
+                task_name, lock_wait_timeout, sleep, msg=msg, wait_if_no_task=False,
+                filtr=lambda t: t['status'] != 'COMPLETED')
+        # trigger
+        task_id = self.trigger_background_task(task_name)['task_id']
+        # wait for new task
+        msg = 'waiting...' if verbose else None
+        self.wait_for_background_task(
+            task_name, timeout, sleep, msg=msg, filtr=lambda t: t['task_id'] == task_id)
+
+    def wait_for_background_task(self, task_name, timeout=600, sleep=1, msg=None, filtr=None,
+                                 wait_if_no_task=True):
+        """
+        Wait for a certain background task. Optionally specified with `filtr` function
+
+        :param str task_name: for instance `'ml_model_retrain'`
+        :param int? timeout: maximum time to wait after the new task is triggered (default: 10min)
+        :param int? sleep: time to wait between polling (default: 1s)
+        :param str? msg: either `None` to disable print, or message prefix (default: None)
+        :param func? filtr: filter function(task: bool)
+        :param bool? wait_if_no_task: wait (instead of return) if there is no task satisfying filter
+        :returns: True is a task satisfying filters successfully ran, False otherwise
+        :raises: RuntimeError if `timeout` is reached or if the task failed
+        """
+        if filtr is None:
+            filtr = lambda t: True
+        spinner = '|/-\\'
+        task = None
+        time_start = time.time()
+        time_waited = 0
+        i = 0
+        while time_waited < timeout:
+            time.sleep(sleep)
+            time_waited = time.time() - time_start
+            print_time = f'{int(time_waited) // 60:d}m{int(time_waited) % 60:02d}s'
+            tasks = self.get_background_tasks(task_name)['tasks']
+            try:
+                task = next(task for task in tasks if filtr(task))
+            except StopIteration:
+                if wait_if_no_task:
+                    continue
+                else:
+                    return False
+            progress = task.get('progress', '')
+            if task['status'] == 'COMPLETED':
+                if msg is not None:
+                    print(f'\r{msg} {print_time} done   {progress:80s}')
+                return True
+            elif task['status'] == 'FAILED':
+                raise RuntimeError(f'task {task_name} failed with: {progress}')
+            if msg is not None:
+                print(f'\r{msg} {print_time} {spinner[i%len(spinner)]} {progress:80s}', end='')
+                sys.stdout.flush()
+            i += 1
+        raise RuntimeError(f'task {task_name} not done before {timeout}s. Last response: {task}')
 
     # === Utils ===
 

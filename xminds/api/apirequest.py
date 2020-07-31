@@ -9,6 +9,7 @@ This module implements the low level request logic of Crossing Minds API:
 """
 
 import json
+import logging
 import pickle
 import requests
 
@@ -74,6 +75,9 @@ class _BaseCrossingMindsApiRequest:
         resp = self.session.request(method, url, **request_kwargs)
 
         if resp.status_code >= 500:
+            exc_payload = self._parse_response(resp, fallback=True)
+            if exc_payload:
+                logging.error(exc_payload)
             raise ServerError()
         elif resp.status_code >= 400:
             data = self._parse_response(resp, fallback=True)
