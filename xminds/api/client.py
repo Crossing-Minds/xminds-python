@@ -15,7 +15,7 @@ import time
 
 from ..compat import tqdm
 from .apirequest import CrossingMindsApiJsonRequest, CrossingMindsApiPythonRequest
-from .exceptions import JwtTokenExpired, ServerError
+from .exceptions import DuplicatedError, JwtTokenExpired, ServerError
 
 
 def require_login(method):
@@ -870,7 +870,14 @@ class CrossingMindsApiClient:
                 task_name, lock_wait_timeout, sleep, msg=msg, wait_if_no_task=False,
                 filtr=lambda t: t['status'] != 'COMPLETED')
         # trigger
-        task_id = self.trigger_background_task(task_name)['task_id']
+        try:
+            task_id = self.trigger_background_task(task_name)['task_id']
+        except DuplicatedError as exc:
+            if getattr(exc, 'data', {})['name'] != 'TASK_ALREADY_RUNNING':
+                raise
+            # edge case: something else triggered the same task at the same time
+            tasks = self.get_background_tasks(task_name)['tasks']
+            task_id = next(t['task_id'] for t in tasks if t['status'] != 'COMPLETED')
         # wait for new task
         msg = 'waiting...' if verbose else None
         self.wait_for_background_task(
@@ -890,8 +897,6 @@ class CrossingMindsApiClient:
         :returns: True is a task satisfying filters successfully ran, False otherwise
         :raises: RuntimeError if `timeout` is reached or if the task failed
         """
-        if filtr is None:
-            filtr = lambda t: True
         spinner = '|/-\\'
         task = None
         time_start = time.time()
@@ -903,12 +908,12 @@ class CrossingMindsApiClient:
             print_time = f'{int(time_waited) // 60:d}m{int(time_waited) % 60:02d}s'
             tasks = self.get_background_tasks(task_name)['tasks']
             try:
-                task = next(task for task in tasks if filtr(task))
+                task = next(task for task in tasks if (not filtr or filtr(task)))
             except StopIteration:
                 if wait_if_no_task:
                     continue
                 else:
-                    return False
+                    return (task is not None)
             progress = task.get('progress', '')
             if task['status'] == 'COMPLETED':
                 if msg is not None:
