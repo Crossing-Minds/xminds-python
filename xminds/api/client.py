@@ -912,8 +912,8 @@ class CrossingMindsApiClient:
             print_time = f'{int(time_waited) // 60:d}m{int(time_waited) % 60:02d}s'
             tasks = self.get_background_tasks(task_name)['tasks']
             try:
-                task = next(task for task in tasks if (not filtr or filtr(task)))
-            except StopIteration:
+                task = max(filter(filtr, tasks), key=lambda t: t['start_time'])
+            except ValueError:
                 if wait_if_no_task:
                     continue
                 else:
