@@ -388,7 +388,7 @@ class CrossingMindsApiClient:
         """
         Create a new user, or update it if the ID already exists.
 
-        :param object user: user ID and properties {'user_id': ID, *<property_name: property_value>}
+        :param dict user: user ID and properties {'user_id': ID, *<property_name: property_value>}
         """
         user = dict(user)
         user_id = self._userid2url(user.pop('user_id'))
@@ -405,7 +405,7 @@ class CrossingMindsApiClient:
 
         :param array users: array with fields ['id': ID, *<property_name: value_type>]
             contains only the non-repeated values,
-        :param array? users_m2m: object of arrays for repeated values:
+        :param dict? users_m2m: dict of arrays for repeated values:
             {
                 *<repeated_property_name: {
                     'name': str,
@@ -539,7 +539,7 @@ class CrossingMindsApiClient:
         :returns: {
             'items': array with fields ['id': ID, *<property_name: value_type>]
                 contains only the non-repeated values,
-            'items_m2m': object of arrays for repeated values:
+            'items_m2m': dict of arrays for repeated values:
                 {
                     *<repeated_property_name: {
                         'name': str,
@@ -557,7 +557,7 @@ class CrossingMindsApiClient:
         """
         Create a new item, or update it if the ID already exists.
 
-        :param object item: item ID and properties {'item_id': ID, *<property_name: property_value>}
+        :param dict item: item ID and properties {'item_id': ID, *<property_name: property_value>}
         """
         item = dict(item)
         item_id = self._itemid2url(item.pop('item_id'))
@@ -574,7 +574,7 @@ class CrossingMindsApiClient:
 
         :param array items: array with fields ['id': ID, *<property_name: value_type>]
             contains only the non-repeated values,
-        :param array? items_m2m: object of arrays for repeated values:
+        :param array? items_m2m: dict of arrays for repeated values:
             {
                 *<repeated_property_name: {
                     'name': str,
@@ -640,11 +640,13 @@ class CrossingMindsApiClient:
     # === Reco: Session-to-item ===
 
     @require_login
-    def get_reco_session_to_items(self, ratings, amt=None, cursor=None, filters=None):
+    def get_reco_session_to_items(self, ratings=None, user_properties=None,
+                                  amt=None, cursor=None, filters=None):
         """
         Get items recommendations given the ratings of an anonymous session.
 
-        :param array ratings: ratings array with fields ['item_id': ID, 'rating': float]
+        :param array? ratings: ratings array with fields ['item_id': ID, 'rating': float]
+        :param dict? user_properties: user properties {**property_name: property_value(s)}
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
         :param list-str? filters: Filter by properties. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
@@ -654,9 +656,11 @@ class CrossingMindsApiClient:
         }
         """
         path = f'recommendation/sessions/items/'
-        data = {
-            'ratings': ratings,
-        }
+        data = {}
+        if ratings is not None:
+            data['ratings'] = ratings
+        if user_properties:
+            data['user_properties'] = user_properties
         if amt:
             data['amt'] = amt
         if cursor:
