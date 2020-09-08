@@ -111,6 +111,33 @@ class CrossingMindsApiClient:
         }
         return self.api.get(path=path, params=data)
 
+    @require_login
+    def get_accounts(self):
+        """
+        Get all accounts on the current organization
+
+        :returns: {
+            'individual_accounts': [
+                {
+                    'first_name': str,
+                    'last_name': str,
+                    'email': str,
+                    'role': str,
+                    'verified': bool,
+                },
+            ],
+            'service_accounts': [
+                {
+                    'name': str,
+                    'role': str,
+                    'verified': bool,
+                },
+            ],
+        }
+        """
+        path = f'organizations/accounts/'
+        return self.api.get(path=path)
+
     # === Login ===
 
     def login_individual(self, email, password, db_id, frontend_user_id=None):
