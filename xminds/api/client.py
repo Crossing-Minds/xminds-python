@@ -260,6 +260,11 @@ class CrossingMindsApiClient:
                     'description': str,
                     'item_id_type': str,
                     'user_id_type': str,
+                    'counters': {
+                        'rating': int,
+                        'user': int,
+                        'item': int,
+                    }
                 },
             ]
         }
@@ -283,6 +288,11 @@ class CrossingMindsApiClient:
             'description': str,
             'item_id_type': str,
             'user_id_type': str,
+            'counters': {
+                'rating': int,
+                'user': int,
+                'item': int,
+            }
         }
         """
         path = f'databases/current/'
