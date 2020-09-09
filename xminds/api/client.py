@@ -415,6 +415,37 @@ class CrossingMindsApiClient:
         return self.api.get(path=path)
 
     @require_login
+    def list_users_paginated(self, amt=None, cursor=None):
+        """
+        Get multiple users by page.
+        The response is paginated, you can control the response amount and offset
+        using the query parameters ``amt`` and ``cursor``.
+
+        :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
+        :returns: {
+            'users': array with fields ['id': ID, *<property_name: value_type>]
+                contains only the non-repeated values,
+            'users_m2m': dict of arrays for repeated values:
+                {
+                    *<repeated_property_name: {
+                        'name': str,
+                        'array': array with fields ['user_index': uint32, 'value_id': value_type],
+                    }>
+                },
+            'has_next': bool,
+            'next_cursor': str, pagination cursor to use in next request to get more users,
+        }
+        """
+        path = f'users-bulk/'
+        params = {}
+        if amt:
+            params['amt'] = amt
+        if cursor:
+            params['cursor'] = cursor
+        return self.api.get(path=path, params=params)
+
+    @require_login
     def create_or_update_user(self, user):
         """
         Create a new user, or update it if the ID already exists.
@@ -582,6 +613,37 @@ class CrossingMindsApiClient:
         path = f'items-bulk/list/'
         data = {'items_id': items_id}
         return self.api.post(path=path, data=data)
+
+    @require_login
+    def list_items_paginated(self, amt=None, cursor=None):
+        """
+        Get multiple items by page.
+        The response is paginated, you can control the response amount and offset
+        using the query parameters ``amt`` and ``cursor``.
+
+        :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
+        :returns: {
+            'items': array with fields ['id': ID, *<property_name: value_type>]
+                contains only the non-repeated values,
+            'items_m2m': dict of arrays for repeated values:
+                {
+                    *<repeated_property_name: {
+                        'name': str,
+                        'array': array with fields ['item_index': uint32, 'value_id': value_type],
+                    }>
+                },
+            'has_next': bool,
+            'next_cursor': str, pagination cursor to use in next request to get more items,
+        }
+        """
+        path = f'items-bulk/'
+        params = {}
+        if amt:
+            params['amt'] = amt
+        if cursor:
+            params['cursor'] = cursor
+        return self.api.get(path=path, params=params)
 
     @require_login
     def create_or_update_item(self, item):
