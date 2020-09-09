@@ -112,7 +112,7 @@ class CrossingMindsApiClient:
         return self.api.get(path=path, params=data)
 
     @require_login
-    def get_accounts(self):
+    def list_accounts(self):
         """
         Get all accounts on the current organization
 
@@ -130,7 +130,6 @@ class CrossingMindsApiClient:
                 {
                     'name': str,
                     'role': str,
-                    'verified': bool,
                 },
             ],
         }
@@ -286,12 +285,7 @@ class CrossingMindsApiClient:
                     'name': str,
                     'description': str,
                     'item_id_type': str,
-                    'user_id_type': str,
-                    'counters': {
-                        'rating': int,
-                        'user': int,
-                        'item': int,
-                    }
+                    'user_id_type': str
                 },
             ]
         }
