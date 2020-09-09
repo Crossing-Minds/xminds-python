@@ -872,6 +872,28 @@ class CrossingMindsApiClient:
         return self.api.get(path=path, params=params)
 
     @require_login
+    def list_ratings(self, amt=None, cursor=None):
+        """
+        List the ratings of one database
+
+        :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
+        :returns: {
+            'has_next': bool,
+            'next_cursor': str,
+            'ratings': array with fields
+                ['item_id': ID, 'user_id': ID, 'rating': float, 'timestamp': float]
+        }
+        """
+        path = f'ratings-bulk/'
+        params = {}
+        if amt:
+            params['amt'] = amt
+        if cursor:
+            params['cursor'] = cursor
+        return self.api.get(path=path, params=params)
+
+    @require_login
     def delete_rating(self, user_id, item_id):
         """
         Delete a single rating for a given user.
