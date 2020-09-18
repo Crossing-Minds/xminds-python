@@ -734,7 +734,7 @@ class CrossingMindsApiClient:
 
     @require_login
     def get_reco_session_to_items(self, ratings=None, user_properties=None,
-                                  amt=None, cursor=None, filters=None):
+                                  amt=None, cursor=None, filters=None, exclude_rated_items=None):
         """
         Get items recommendations given the ratings of an anonymous session.
 
@@ -743,6 +743,7 @@ class CrossingMindsApiClient:
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
         :param list-str? filters: Filter by properties. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param bool? exclude_rated_items: exclude rated items from response
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
@@ -760,12 +761,15 @@ class CrossingMindsApiClient:
             data['cursor'] = cursor
         if filters:
             data['filters'] = filters
+        if exclude_rated_items is not None:
+            data['exclude_rated_items'] = exclude_rated_items
         return self.api.post(path=path, data=data)
 
     # === Reco: User-to-item ===
 
     @require_login
-    def get_reco_user_to_items(self, user_id, amt=None, cursor=None, filters=None):
+    def get_reco_user_to_items(self, user_id, amt=None, cursor=None, filters=None,
+                               exclude_rated_items=None):
         """
         Get items recommendations given a user ID.
 
@@ -773,6 +777,7 @@ class CrossingMindsApiClient:
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
         :param list-str? filters: Filter by properties. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param bool? exclude_rated_items: exclude rated items from response
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
@@ -787,6 +792,8 @@ class CrossingMindsApiClient:
             params['cursor'] = cursor
         if filters:
             params['filters'] = filters
+        if exclude_rated_items is not None:
+            params['exclude_rated_items'] = exclude_rated_items
         return self.api.get(path=path, params=params)
 
     # === User Ratings ===
