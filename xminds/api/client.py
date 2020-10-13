@@ -713,14 +713,17 @@ class CrossingMindsApiClient:
     # === Reco: Item-to-item ===
 
     @require_login
-    def get_reco_item_to_items(self, item_id, amt=None):
+    def get_reco_item_to_items(self, item_id, amt=None, cursor=None, filters=None):
         """
         Get similar items.
 
         :param ID item_id: item ID
         :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
+        :param list-str? filters: Filter by properties. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
         :returns: {
             'items_id': array of items IDs,
+            'next_cursor': str, pagination cursor to use in next request to get more items,
         }
         """
         item_id = self._itemid2url(item_id)
@@ -728,6 +731,10 @@ class CrossingMindsApiClient:
         params = {}
         if amt:
             params['amt'] = amt
+        if cursor:
+            params['cursor'] = cursor
+        if filters:
+            params['filters'] = filters
         return self.api.get(path=path, params=params)
 
     # === Reco: Session-to-item ===
@@ -994,7 +1001,7 @@ class CrossingMindsApiClient:
             msg = 'waiting for already running...' if verbose else None
             self.wait_for_background_task(
                 task_name, lock_wait_timeout, sleep, msg=msg, wait_if_no_task=False,
-                filtr=lambda t: t['status'] != 'COMPLETED')
+                filtr=lambda t: t['status'] == 'RUNNING')
         # trigger
         try:
             task_id = self.trigger_background_task(task_name)['task_id']
