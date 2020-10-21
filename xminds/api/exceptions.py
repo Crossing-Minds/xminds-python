@@ -3,7 +3,7 @@ xminds.api.exceptions
 ~~~~~~~~~~~~~~~~~~~~~
 
 This module defines all custom API exceptions.
-All exceptions inherit from `XMindsError`.
+All exceptions inherit from ``XMindsError``.
 """
 
 class XMindsError(Exception):
@@ -17,7 +17,7 @@ class XMindsError(Exception):
             try:
                 self.message = self.message.format(**data)
             except KeyError as e:
-                print(f'Missing key {e} in `error_extra_data`')
+                print(f'Missing key {e} in ``error_extra_data``')
 
     def __str__(self):
         msg = self.message

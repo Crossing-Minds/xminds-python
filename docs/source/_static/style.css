@@ -1,0 +1,166 @@
+
+/*
+orange: #facf07
+light-cyan: #07cBcd
+darker-blue: #141dc2
+light-gray: #d6d7db
+*/
+
+@import url('https://fonts.googleapis.com/css?family=Source+Code+Pro&display=swap');
+
+/* body */
+
+body {
+  font-family: "Source Sans Pro", sans-serif;
+  color: #152c55;
+  padding-top: 45px;
+}
+
+body > .container {
+  min-height: calc(100vh - 45px - 21px - 40px);
+  margin-bottom: 40px;
+}
+
+/* titles */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Source Sans Pro", sans-serif;
+  font-weight: 400;
+  color: #002667;
+}
+
+h1, h2, h3 {
+  margin-top: 32px;
+}
+
+h1 a, h2 a, h3 a, h4 a, h5 a, h6 a,
+h1 a:hover, h2 a:hover, h3 a:hover, h4 a:hover, h5 a:hover, h6 a:hover {
+  color: #002667;
+  text-decoration: none;
+}
+
+h1 {
+  font-weight: 300;
+}
+
+h4 {
+  font-size: 17px;
+  margin-top: 24px;
+}
+
+/* generic elements */
+
+table {
+  font-size: inherit;
+}
+
+code {
+  color: #141dc2;
+}
+code.literal:not(.xref) {
+  color: #333;
+  background-color: #f4f5f980;
+  border-radius: 5px;
+  border: 1px solid #e4ecf691;
+}
+
+code, cite, pre {
+  font-family: "Source code pro", Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-style: normal;
+}
+
+div.topic.contents {
+  border: none;
+}
+
+.navbar {
+  background-image: radial-gradient(circle farthest-side at 50% 50%,#52a39f,#1e698a 42%,#16495c 79%,#152c55);
+}
+
+li p:first-child {
+  margin: 0px 0px 0px 0px;  /* reset weird 10.5px for li with single p then ul */
+}
+
+.field-list ul {
+  padding-left: 1em;
+  margin-left: 1em;
+  margin-top: 1em;
+  list-style: none;
+  border-left: 1px solid #b5b5b580;
+}
+
+.field-list li {
+  margin-bottom: 1em;
+}
+
+.sig-name {
+  padding-left: 0;
+}
+
+.highlight, .literal-block-wrapper.container {
+  margin: 16px 0px 20px 0px;
+}
+.highlight-bash + .literal-block-wrapper.container {
+  margin: -8px 0px 20px 0px;
+}
+
+/* endpoints *
+
+dl.field-list {
+  margin-top: 2em;
+  margin-bottom: 0.5em;
+  display: block;  /* was grid * /
+}
+
+dd {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+*/
+
+pre {
+  background-color: #f4f5f980;
+  border-color: #e4ecf691;
+  border-radius: 5px;
+}
+
+/* info, altert, ... */
+.admonition-title {
+  /* can we directly remove from html? */
+  display: none;
+}
+
+.alert-info {
+  background-color: #fafafe;
+  border-color: #ebebfe;
+  color: #9fadc6;
+  font-size: 14px;
+}
+
+.alert-warning {
+  background-color: #ffd00030;
+  border-color: #facf0778;
+  color: #152c55;
+  font-size: 14px;
+}
+
+
+/* code caption */
+
+.literal-block-wrapper.container {
+  width: 100%;
+  padding: 0;
+}
+div.code-block-caption {
+  background-color: #e4ecf6a8;
+  border-radius: 5px 5px 0px 0px;
+  padding: 6px 16px;
+}
+.literal-block-wrapper pre {
+  border-radius: 0px 0px 5px 5px;
+}
+.code-block-caption span.caption-text {
+  color: #152c5596;
+  font-size: 14px;
+}

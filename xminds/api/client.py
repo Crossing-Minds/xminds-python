@@ -9,9 +9,10 @@ The client handles the logic to automatically get a new JWT token using the refr
 import base64
 from functools import wraps
 import logging
-import numpy
 import sys
 import time
+
+import numpy
 
 from ..compat import tqdm
 from .apirequest import CrossingMindsApiJsonRequest, CrossingMindsApiPythonRequest
@@ -928,7 +929,7 @@ class CrossingMindsApiClient:
         Trigger background task such as retraining of ML models.
         You should not have to call this endpoint yourself, as this is done automatically.
 
-        :param str task_name: for instance `'ml_model_retrain'`
+        :param str task_name: for instance ``'ml_model_retrain'``
         :returns: {
             'task_id': str,
         }
@@ -943,7 +944,7 @@ class CrossingMindsApiClient:
         """
         List currently running background tasks such as ML models training.
 
-        :param str task_name: for instance `'ml_model_retrain'`
+        :param str task_name: for instance ``'ml_model_retrain'``
         :returns: {
             'tasks': [{
                 'name': string, Task name
@@ -981,15 +982,15 @@ class CrossingMindsApiClient:
         model training is also triggered automatically.
         By default this waits for an already running task before triggering the new one
 
-        :param str task_name: for instance `'ml_model_retrain'`
+        :param str task_name: for instance ``'ml_model_retrain'``
         :param int? timeout: maximum time to wait after the new task is triggered (default: 10min)
         :param int? lock_wait_timeout: if another task is already running, maximum time to wait
-            for it to finish before triggering the new task (default: `timeout`)
+            for it to finish before triggering the new task (default: ``timeout``)
         :param int? sleep: time to wait between polling (default: 1s)
         :returns: {
             'task_id': str,
         }
-        :raises: RuntimeError if either `timeout` or `lock_wait_timeout` is reached
+        :raises: RuntimeError if either ``timeout`` or ``lock_wait_timeout`` is reached
         """
         assert sleep > 0.1
         if lock_wait_timeout is None:
@@ -1019,16 +1020,16 @@ class CrossingMindsApiClient:
     def wait_for_background_task(self, task_name, timeout=600, sleep=1, msg=None, filtr=None,
                                  wait_if_no_task=True):
         """
-        Wait for a certain background task. Optionally specified with `filtr` function
+        Wait for a certain background task. Optionally specified with ``filtr`` function
 
-        :param str task_name: for instance `'ml_model_retrain'`
+        :param str task_name: for instance ``'ml_model_retrain'``
         :param int? timeout: maximum time to wait after the new task is triggered (default: 10min)
         :param int? sleep: time to wait between polling (default: 1s)
-        :param str? msg: either `None` to disable print, or message prefix (default: None)
+        :param str? msg: either ``None`` to disable print, or message prefix (default: None)
         :param func? filtr: filter function(task: bool)
         :param bool? wait_if_no_task: wait (instead of return) if there is no task satisfying filter
         :returns: True is a task satisfying filters successfully ran, False otherwise
-        :raises: RuntimeError if `timeout` is reached or if the task failed
+        :raises: RuntimeError if ``timeout`` is reached or if the task failed
         """
         spinner = '|/-\\'
         task = None

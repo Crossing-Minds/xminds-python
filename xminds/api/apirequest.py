@@ -11,6 +11,7 @@ This module implements the low level request logic of Crossing Minds API:
 import json
 import logging
 import pickle
+
 import requests
 
 from .. import __version__
