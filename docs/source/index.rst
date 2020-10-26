@@ -29,6 +29,6 @@ Please visit `our website <https://crossingminds.com/>`_ if you want to learn mo
 Release notes
 -------------
 
-So far we have only released array tools (numpy array, numpy structured array), as well as Gaussian Processes optimisation tools.
+So far we have released array tools (numpy array, numpy structured array).
 
-We plan on publishing some of our Recommender system tools and utils as well as some Linear Algebra tools, so stay tuned!
+We plan on publishing some of our Recommender system tools and utils as well as some Gaussian Processes optimisation tools and Linear Algebra tools, so stay tuned!
