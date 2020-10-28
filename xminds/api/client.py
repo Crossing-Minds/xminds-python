@@ -921,6 +921,17 @@ class CrossingMindsApiClient:
         path = f'users/{user_id}/ratings/{item_id}'
         return self.api.delete(path=path)
 
+    @require_login
+    def delete_user_ratings(self, user_id):
+        """
+        Delete all ratings of a given user.
+
+        :param ID user_id: user ID
+        """
+        user_id = self._userid2url(user_id)
+        path = f'users/{user_id}/ratings/'
+        return self.api.delete(path=path)
+
     # === Scheduled Background Tasks ===
 
     @require_login
