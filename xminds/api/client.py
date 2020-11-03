@@ -249,6 +249,52 @@ class CrossingMindsApiClient:
         self._refresh_token = resp['refresh_token']
         return resp
 
+    # === Org metadata ===
+
+    @require_login
+    def get_organization(self):
+        """
+        get organization meta-data
+        """
+        path = f'organizations/current/'
+        return self.api.get(path=path)
+
+    @require_login
+    def create_or_partial_update_organization(self, metadata, preserve=None):
+        """
+        create, or apply deep partial update of meta-data
+        :param dict metadata: meta-data to store structured as unvalidated JSON-compatible dict
+        :param bool? preserve: set to `True` to append values instead of replace as in RFC7396
+        """
+        path = f'organizations/current/'
+        data = {'metadata': metadata}
+        if preserve is not None:
+            data['preserve'] = preserve
+        return self.api.patch(path=path, data=data)
+
+    @require_login
+    def partial_update_organization_preview(self, metadata, preserve=None):
+        """
+        preview deep partial update of extra data, without changing any state
+        :param dict metadata: extra meta-data to store structured as unvalidated JSON-compatible dict
+        :param bool? preserve: set to `True` to append values instead of replace as in RFC7396
+        :returns: {
+            'metadata_old': {
+                'description': str,
+                'extra': {**any-key: any-val},
+            },
+            'metadata_new': {
+                'description': str,
+                'extra': {**any-key: any-val},
+            },
+        }
+        """
+        path = f'organizations/current/preview/'
+        data = {'metadata': metadata}
+        if preserve is not None:
+            data['preserve'] = preserve
+        return self.api.patch(path=path, data=data)
+
     # === Database ===
 
     @require_login
@@ -314,11 +360,60 @@ class CrossingMindsApiClient:
                 'rating': int,
                 'user': int,
                 'item': int,
-            }
+            },
+            'metadata': {**any-key: any-val},
         }
         """
         path = f'databases/current/'
         return self.api.get(path=path)
+
+    @require_login
+    def partial_update_database(self, description=None, metadata=None, preserve=None):
+        """
+        update description, and apply deep partial update of extra meta-data
+        :param str? description: description of DB
+        :param dict? metadata: extra data to store structured as unvalidated JSON-compatible dict
+        :param bool? preserve: set to `True` to append values instead of replace as in RFC7396
+        """
+        path = f'databases/current/'
+        data = {}
+        assert description is not None or metadata is not None
+        if description is not None:
+            data['description'] = description
+        if metadata is not None:
+            data['metadata'] = metadata
+        if preserve is not None:
+            data['preserve'] = preserve
+        return self.api.patch(path=path, data=data)
+
+    @require_login
+    def partial_update_database_preview(self, description=None, metadata=None, preserve=None):
+        """
+        preview deep partial update of extra data, without changing any state
+        :param str? description: description of DB
+        :param dict? metadata: extra data to store structured as unvalidated JSON-compatible dict
+        :param bool? preserve: set to `True` to append values instead of replace as in RFC7396
+        :returns: {
+            'metadata_old': {
+                'description': str,
+                'metadata': {**any-key: any-val},
+            },
+            'metadata_new': {
+                'description': str,
+                'metadata': {**any-key: any-val},
+            },
+        }
+        """
+        path = f'databases/current/preview/'
+        data = {}
+        assert description is not None or metadata is not None
+        if description is not None:
+            data['description'] = description
+        if metadata is not None:
+            data['metadata'] = metadata
+        if preserve is not None:
+            data['preserve'] = preserve
+        return self.api.patch(path=path, data=data)
 
     @require_login
     def delete_database(self):
