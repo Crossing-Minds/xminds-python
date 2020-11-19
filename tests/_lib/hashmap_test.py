@@ -7,10 +7,10 @@ import unittest
 
 import numpy
 
-from xminds.lib.arrays import to_structured
-from xminds._lib.hashmaps import (UInt64Hashmap, UInt64StructHashmap, ObjectHashmap,
-                                  array_hash, empty_hashmap, get_dense_labels_map, reverse_values2labels,
-                                  in1d, search, unique, unique_count, update_dense_labels_map, values_hash)
+from xminds.lib.arrays import to_structured, unique_count
+from xminds._lib.hashmap import (UInt64Hashmap, UInt64StructHashmap, ObjectHashmap,
+                                 array_hash, empty_hashmap, get_dense_labels_map, reverse_values2labels,
+                                 unique, update_dense_labels_map, values_hash)
 
 
 def _cat(ar1, ar2):
@@ -177,9 +177,11 @@ class UInt64StructHashtableTestCase(BaseHashtableTestCase, unittest.TestCase):
     def get_keys(cls, n=None, dtype=None):
         n = n or 1<<10
         dtype = list(dtype or cls.dtype)
-        random.shuffle(dtype)  # shuffle order of fields in dtype to assert implementation re-orders
+        # shuffle order of fields in dtype to assert implementation re-orders
+        random.shuffle(dtype)
         keys = numpy.empty(n, dtype=dtype)
-        keys[:] = [tuple(t) for t in numpy.random.randint(1, 1<<63, size=(n, len(dtype)))]
+        keys[:] = [tuple(t) for t in numpy.random.randint(
+            1, 1<<63, size=(n, len(dtype)))]
         return keys
 
     # ...all test inherited from BaseHashtableTestCase...
@@ -213,9 +215,10 @@ class BytesStringHashtableTestCase(BaseHashtableTestCase, unittest.TestCase):
 
     @classmethod
     def get_keys(cls, n=None, str_len=20):
-        n = n or 1<<10
+        n = n or 1 << 10
         keys = numpy.empty(n, dtype='{}{}'.format(cls.KIND, str_len))
-        keys[:] = [str(i).encode('latin1') for i in numpy.random.randint(1, 1<<63, size=n)]
+        keys[:] = [str(i).encode('latin1')
+                   for i in numpy.random.randint(1, 1 << 63, size=n)]
         return keys
 
     # ...all test inherited from BaseHashtableTestCase...
@@ -246,11 +249,13 @@ class StringTupleHashtableTestCase(BaseHashtableTestCase, unittest.TestCase):
 
     @classmethod
     def get_keys(cls, n=None):
-        n = n or 1<<10
+        n = n or 1 << 10
         dtype = [('s1', 'S20'), ('s2', 'S20')]
-        random.shuffle(dtype)  # shuffle order of fields in dtype to assert implementation re-orders
+        # shuffle order of fields in dtype to assert implementation re-orders
+        random.shuffle(dtype)
         keys = numpy.empty(n, dtype=dtype)
-        keys[:] = [(str(i), str(i + 1)) for i in numpy.random.randint(1, 1<<63, size=n)]
+        keys[:] = [(str(i), str(i + 1))
+                   for i in numpy.random.randint(1, 1 << 63, size=n)]
         return keys
 
     # ...all test inherited from BaseHashtableTestCase...
@@ -280,7 +285,8 @@ class UniqueTestCase(unittest.TestCase):
         self._test_unique(vals)
 
     def test_unique_on_mix_int_struct(self):
-        dtype = [('a', 'uint8'), ('b', 'int64'), ('c', 'uint64'), ('d', 'int8')]
+        dtype = [('a', 'uint8'), ('b', 'int64'),
+                 ('c', 'uint64'), ('d', 'int8')]
         vals = UInt64StructHashtableTestCase.get_keys(dtype=dtype)
         self._test_unique(vals)
 
@@ -319,7 +325,8 @@ class UniqueTestCase(unittest.TestCase):
         assert uniq.size == n_uniq
         assert uniq.dtype == vals.dtype
         assert (numpy.sort(uniq) == numpy.sort(uniq_vals)).all()
-        uniq, idx_in_uniq, uniq_idx = unique(vals, return_inverse=True, return_index=True)
+        uniq, idx_in_uniq, uniq_idx = unique(
+            vals, return_inverse=True, return_index=True)
         assert (uniq[idx_in_uniq] == vals).all()
         assert (uniq == vals[uniq_idx]).all()
         # unique count on itself
@@ -330,7 +337,8 @@ class UniqueTestCase(unittest.TestCase):
         uniq = unique(dups)
         assert uniq.size == n_uniq
         assert (numpy.sort(uniq) == numpy.sort(uniq_vals)).all()
-        uniq, idx_in_uniq, uniq_idx = unique(dups, return_inverse=True, return_index=True)
+        uniq, idx_in_uniq, uniq_idx = unique(
+            dups, return_inverse=True, return_index=True)
         assert (uniq[idx_in_uniq] == dups).all()
         assert (uniq == dups[uniq_idx]).all()
         # unique count on dups
@@ -340,7 +348,8 @@ class UniqueTestCase(unittest.TestCase):
 class BaseHashmapTestCaseMixin(object):
     """ TestCase template to test hashmap with values """
     cls = None
-    val_dtype = [('tinyint', 'uint8'), ('bigint', 'uint64'), ('vector', 'float32', 10)]
+    val_dtype = [('tinyint', 'uint8'), ('bigint', 'uint64'),
+                 ('vector', 'float32', 10)]
 
     @classmethod
     def get_keys(cls, n=None):
@@ -350,7 +359,8 @@ class BaseHashmapTestCaseMixin(object):
     def get_values(cls, n=None):
         n = n or 1<<10
         keys = numpy.empty(n, dtype=cls.val_dtype)
-        keys[:] = [tuple(t) for t in numpy.random.randint(1, 1<<63, size=(n, len(cls.val_dtype)))]
+        keys[:] = [tuple(t) for t in numpy.random.randint(
+            1, 1<<63, size=(n, len(cls.val_dtype)))]
         return keys
 
     def test_get_many(self):
@@ -424,88 +434,6 @@ class ObjectHashmapTestCase(BaseHashmapTestCaseMixin, unittest.TestCase):
         return UnicodeStringHashtableTestCase.get_keys(n)
 
 
-class SearchTestCase(unittest.TestCase):
-    """ test that `search` automatically adapts to and cast its arguments """
-
-    def test_search_on_uint64(self):
-        vals = UInt64HashmapTestCase.get_keys()
-        vals2 = UInt64HashmapTestCase.get_keys()
-        self._test_search(vals, vals2)
-
-    def test_search_on_uint32(self):
-        vals = UInt64HashmapTestCase.get_keys().astype('uint32')
-        vals2 = UInt64HashmapTestCase.get_keys().astype('uint32')
-        self._test_search(vals, vals2)
-
-    def test_search_on_int64(self):
-        vals = UInt64HashmapTestCase.get_keys().astype('int64')
-        vals2 = UInt64HashmapTestCase.get_keys().astype('int64')
-        self._test_search(vals, vals2)
-
-    def test_search_on_int32(self):
-        vals = UInt64HashmapTestCase.get_keys().astype('int32')
-        vals2 = UInt64HashmapTestCase.get_keys().astype('int32')
-        self._test_search(vals, vals2)
-
-    def test_search_on_uint64_struct(self):
-        vals = UInt64StructHashmapTestCase.get_keys()
-        vals2 = UInt64StructHashmapTestCase.get_keys()
-        self._test_search(vals, vals2)
-
-    def test_search_on_mix_int_struct(self):
-        dtype = [('a', 'uint8'), ('b', 'int64'), ('c', 'uint64'), ('d', 'int8')]
-        vals = UInt64StructHashmapTestCase.get_keys(dtype=dtype)
-        vals2 = UInt64StructHashmapTestCase.get_keys(dtype=dtype)
-        self._test_search(vals, vals2)
-
-    def test_search_on_mix_tiny_types_struct(self):
-        n = 64  # only a few items since duplicates are more likely
-        dtype = [('a', 'uint8'), ('b', 'int8'), ('c', 'int8')]
-        vals = UInt64StructHashmapTestCase.get_keys(dtype=dtype, n=n)
-        vals2 = UInt64StructHashmapTestCase.get_keys(dtype=dtype, n=n)
-        self._test_search(vals, vals2)
-
-    def test_search_on_object(self):
-        vals = ObjectHashmapTestCase.get_keys()
-        vals2 = ObjectHashmapTestCase.get_keys()
-        self._test_search(vals, vals2)
-
-    @classmethod
-    def _test_search(cls, vals, vals2):
-        n = vals.size
-        # search itself
-        idx, found = search(vals, vals)
-        assert found.all()
-        assert (idx == numpy.arange(n)).all()
-        assert in1d(vals, vals).all()
-        # search half of itself within itself
-        idx, found = search(vals[:n // 2], vals)
-        assert found.all()
-        assert (idx == numpy.arange(n // 2)).all()
-        assert in1d(vals[:n // 2], vals).all()
-        # search duplicate of itself within itself
-        dups = _cat(vals, vals)
-        idx, found = search(dups, vals)
-        assert found.all()
-        assert (idx[:n] == numpy.arange(n)).all()
-        assert (idx[n:] == numpy.arange(n)).all()
-        assert in1d(dups, vals).all()
-        # only not found
-        idx, found = search(vals2, vals)
-        assert not found.any()
-        assert not in1d(vals2, vals).any()
-        # mix found / not found
-        idx, found = search(_cat(vals, vals2), vals)
-        assert found[:n].all()
-        assert not found[n:].any()
-        assert (idx[:n] == numpy.arange(n)).all()
-        found = in1d(_cat(vals, vals2), vals)
-        assert found[:n].all()
-        assert not found[n:].any()
-        assert (numpy.invert(in1d(_cat(vals, vals2), vals))
-                == in1d(_cat(vals, vals2), vals, invert=True)).all()
-
-
 class DenseLabelsMapTestCase(unittest.TestCase):
     """ test that `get_dense_labels_map` automatically adapts to and cast its arguments """
 
@@ -530,7 +458,8 @@ class DenseLabelsMapTestCase(unittest.TestCase):
         self._test_get_dense_labels_map(vals)
 
     def test_labels_on_mix_int_struct(self):
-        dtype = [('a', 'uint8'), ('b', 'int64'), ('c', 'uint64'), ('d', 'int8')]
+        dtype = [('a', 'uint8'), ('b', 'int64'),
+                 ('c', 'uint64'), ('d', 'int8')]
         vals = UInt64StructHashmapTestCase.get_keys(dtype=dtype)
         self._test_get_dense_labels_map(vals)
 
@@ -581,7 +510,8 @@ class DenseLabelsMapTestCase(unittest.TestCase):
         # test on unique values
         labels2values, values2labels = get_dense_labels_map(vals)
         assert labels2values.size == n  # assert correct amount of labels
-        labels, found = values2labels.get_many(vals)  # assert map to labels works
+        labels, found = values2labels.get_many(
+            vals)  # assert map to labels works
         assert found.all()
         l2l, found = values2labels.get_many(labels2values)
         assert found.all()
@@ -591,7 +521,8 @@ class DenseLabelsMapTestCase(unittest.TestCase):
         numpy.random.shuffle(dups)
         labels2values, values2labels = get_dense_labels_map(dups)
         assert labels2values.size == n  # assert correct amount of labels
-        labels, found = values2labels.get_many(vals)  # assert map to labels works
+        labels, found = values2labels.get_many(
+            vals)  # assert map to labels works
         assert found.all()
         l2l, found = values2labels.get_many(labels2values)
         assert (l2l == numpy.arange(n)).all()  # assert respective inverse
@@ -624,7 +555,8 @@ class ArrayHashTestCase(unittest.TestCase):
         self._test_array_hash(vals)
 
     def test_array_hash_on_mix_int_struct(self):
-        dtype = [('a', 'uint8'), ('b', 'int64'), ('c', 'uint64'), ('d', 'int8'), ('e', '?')]
+        dtype = [('a', 'uint8'), ('b', 'int64'),
+                 ('c', 'uint64'), ('d', 'int8'), ('e', '?')]
         vals = UInt64StructHashmapTestCase.get_keys(dtype=dtype)
         self._test_array_hash(vals)
 
@@ -678,7 +610,8 @@ class ValuesHashTestCase(unittest.TestCase):
         self._test_values_hash(vals)
 
     def test_values_hash_on_mix_int_struct(self):
-        dtype = [('a', 'uint8'), ('b', 'int64'), ('c', 'uint64'), ('d', 'int8'), ('e', '?')]
+        dtype = [('a', 'uint8'), ('b', 'int64'),
+                 ('c', 'uint64'), ('d', 'int8'), ('e', '?')]
         vals = UInt64StructHashmapTestCase.get_keys(dtype=dtype)
         self._test_values_hash(vals)
 

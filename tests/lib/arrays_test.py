@@ -2,9 +2,10 @@ import unittest
 
 import numpy
 
-from xminds.lib.arrays import  (kargmin, kargmax, to_structured,
-                                set_or_add_to_structured, structured_arrays_mean,
-                                set_or_reallocate)
+from xminds.lib.arrays import (kargmin, kargmax, to_structured,
+                               set_or_add_to_structured, structured_arrays_mean,
+                               set_or_reallocate, in1d, search, cumcount_by_value)
+from tests._lib.hashmap_test import UInt64HashmapTestCase,  UInt64StructHashmapTestCase, ObjectHashmapTestCase, _cat
 
 
 def test_set_or_reallocate():
@@ -25,16 +26,17 @@ def test_set_or_reallocate():
 class StructuredArrayTestCase(unittest.TestCase):
     def test_to_structured(self):
         n = 20
-        items_ty = numpy.random.randint(1, 1<<7, n, dtype='uint8')
-        items_id = numpy.random.randint(1, 1<<15, n, dtype='uint16')
-        items_uuid = numpy.random.randint(1, 1<<31, n, dtype='uint32')
+        items_ty = numpy.random.randint(1, 1 << 7, n, dtype='uint8')
+        items_id = numpy.random.randint(1, 1 << 15, n, dtype='uint16')
+        items_uuid = numpy.random.randint(1, 1 << 31, n, dtype='uint32')
 
         def _assert_ty_id(items):
             assert (items['ty'] == items_ty).all()
             assert (items['id'] == items_id).all()
 
         # default dtype
-        items = to_structured([('ty', items_ty), ('id', items_id), ('uuid', items_uuid)])
+        items = to_structured(
+            [('ty', items_ty), ('id', items_id), ('uuid', items_uuid)])
         _assert_ty_id(items)
         # default dtype with object
         items = to_structured([('ty', items_ty), ('id', items_id),
@@ -49,7 +51,8 @@ class StructuredArrayTestCase(unittest.TestCase):
         assert (items['uuid'] == items_uuid).all()
         # 2d: default dtype
         items_embs = numpy.random.randn(n, 3).astype('float32')
-        items = to_structured([('ty', items_ty), ('id', items_id), ('embs', items_embs)])
+        items = to_structured(
+            [('ty', items_ty), ('id', items_id), ('embs', items_embs)])
         _assert_ty_id(items)
         assert numpy.allclose(items['embs'], items_embs)
         # 2d: given dtype
@@ -97,11 +100,11 @@ class StructuredArrayTestCase(unittest.TestCase):
     def test_set_or_add_to_structured(self):
         n = 20
         array = to_structured([
-            ('a', numpy.random.randint(1, 1<<7, n, dtype='uint8')),
-            ('b', numpy.random.randint(1, 1<<15, (n, 5), dtype='uint16')),
+            ('a', numpy.random.randint(1, 1 << 7, n, dtype='uint8')),
+            ('b', numpy.random.randint(1, 1 << 15, (n, 5), dtype='uint16')),
         ])
         # just new
-        data_c = numpy.random.randint(1, 1<<31, (n, 3), dtype='uint32')
+        data_c = numpy.random.randint(1, 1 << 31, (n, 3), dtype='uint32')
         array2 = set_or_add_to_structured(array, [
             ('c', data_c),
         ])
@@ -109,8 +112,8 @@ class StructuredArrayTestCase(unittest.TestCase):
         assert (array2['b'] == array['b']).all()
         assert (array2['c'] == data_c).all()
         # just old
-        data_a = numpy.random.randint(1, 1<<7, n, dtype='uint32')
-        data_b = numpy.random.randint(1, 1<<15, (n, 5), dtype='uint32')
+        data_a = numpy.random.randint(1, 1 << 7, n, dtype='uint32')
+        data_b = numpy.random.randint(1, 1 << 15, (n, 5), dtype='uint32')
         array2 = set_or_add_to_structured(array, [
             ('a', data_a),
             ('b', data_b),
@@ -128,36 +131,58 @@ class StructuredArrayTestCase(unittest.TestCase):
         assert (array2['c'] == data_c).all()
         # old and new with object
         array = to_structured([
-            ('a', numpy.random.randint(1, 1<<7, n, dtype='uint8')),
-            ('b', numpy.random.randint(1, 1<<15, n).astype('object')),
+            ('a', numpy.random.randint(1, 1 << 7, n, dtype='uint8')),
+            ('b', numpy.random.randint(1, 1 << 15, n).astype('object')),
         ])
         array2 = set_or_add_to_structured(array, [
             ('a', data_a),
-            ('b', numpy.random.randint(1, 1<<15, n).astype('object')),
-            ('c', numpy.random.randint(1, 1<<31, n).astype('object')),
+            ('b', numpy.random.randint(1, 1 << 15, n).astype('object')),
+            ('c', numpy.random.randint(1, 1 << 31, n).astype('object')),
         ])
+
+    def test_set_or_add_to_structured_broadcast(self):
+        n = 20
+        array = to_structured([
+            ('a', numpy.random.randint(1, 1 << 7, n, dtype='uint8')),
+        ])
+        array2 = set_or_add_to_structured(array, [
+            ('int64_0', numpy.asarray([11])),
+            ('int64_1', numpy.asarray([11], dtype='int64')),
+            ('int64_2', 11),
+            ('float64', 11.),
+            ('U64', '11'),
+            ('S64', b'11'),
+        ])
+        for k, t in [('int64_0', 'int64'),('int64_1', 'int64'), ('int64_2', 'int64'),
+                     ('float64', 'float64'), ('U64', '<U2'), ('S64', '|S2')]:
+            assert array2[k].dtype == t
+            assert int(array2[k][0]) == 11
 
     def test_structured_arrays_mean(self):
         n1 = 20
         array1 = to_structured([
-            ('a', numpy.random.randint(1, 1<<7, n1, dtype='uint8')),
-            ('b', numpy.random.randint(1, 1<<15, (n1, 5), dtype='uint16')),
-            ('zz', numpy.random.randint(1, 1<<15, (n1, 5), dtype='uint16')),
+            ('a', numpy.random.randint(1, 1 << 7, n1, dtype='uint8')),
+            ('b', numpy.random.randint(1, 1 << 15, (n1, 5), dtype='uint16')),
+            ('zz', numpy.random.randint(1, 1 << 15, (n1, 5), dtype='uint16')),
         ])
         n2 = 1
         array2 = to_structured([
-            ('a', numpy.random.randint(1, 1<<7, n2, dtype='uint8')),
-            ('b', numpy.random.randint(1, 1<<15, (n2, 5), dtype='uint16')),
-            ('yy', numpy.random.randint(1, 1<<15, n2, dtype='uint16')),
+            ('a', numpy.random.randint(1, 1 << 7, n2, dtype='uint8')),
+            ('b', numpy.random.randint(1, 1 << 15, (n2, 5), dtype='uint16')),
+            ('yy', numpy.random.randint(1, 1 << 15, n2, dtype='uint16')),
         ])
         # intersection
-        mean_intrsct = structured_arrays_mean([array1, array2], keep_missing=False)
+        mean_intrsct = structured_arrays_mean(
+            [array1, array2], keep_missing=False)
         assert mean_intrsct['a'] == numpy.r_[array1['a'], array2['a']].mean()
-        assert (mean_intrsct['b'] == numpy.r_[array1['b'], array2['b']].mean(axis=0)).all()
+        assert (mean_intrsct['b'] == numpy.r_[
+                array1['b'], array2['b']].mean(axis=0)).all()
         # union
-        mean_union = structured_arrays_mean([array1, array2], keep_missing=True)
+        mean_union = structured_arrays_mean(
+            [array1, array2], keep_missing=True)
         assert mean_intrsct['a'] == numpy.r_[array1['a'], array2['a']].mean()
-        assert (mean_intrsct['b'] == numpy.r_[array1['b'], array2['b']].mean(axis=0)).all()
+        assert (mean_intrsct['b'] == numpy.r_[
+                array1['b'], array2['b']].mean(axis=0)).all()
         assert (mean_union['zz'] == array1['zz'].mean(axis=0)).all()
         assert mean_union['yy'] == array2['yy'].mean()
 
@@ -236,3 +261,99 @@ class KArgmaxTestCase(unittest.TestCase):
         assert top.shape == (20, 2)
         assert (top[:, 0] == 7).all()
         assert (top[:, 1] == 4).all()
+
+
+class SearchTestCase(unittest.TestCase):
+    """ test that `search` automatically adapts to and cast its arguments """
+
+    def test_search_on_uint64(self):
+        vals = UInt64HashmapTestCase.get_keys()
+        vals2 = UInt64HashmapTestCase.get_keys()
+        self._test_search(vals, vals2)
+
+    def test_search_on_uint32(self):
+        vals = UInt64HashmapTestCase.get_keys().astype('uint32')
+        vals2 = UInt64HashmapTestCase.get_keys().astype('uint32')
+        self._test_search(vals, vals2)
+
+    def test_search_on_int64(self):
+        vals = UInt64HashmapTestCase.get_keys().astype('int64')
+        vals2 = UInt64HashmapTestCase.get_keys().astype('int64')
+        self._test_search(vals, vals2)
+
+    def test_search_on_int32(self):
+        vals = UInt64HashmapTestCase.get_keys().astype('int32')
+        vals2 = UInt64HashmapTestCase.get_keys().astype('int32')
+        self._test_search(vals, vals2)
+
+    def test_search_on_uint64_struct(self):
+        vals = UInt64StructHashmapTestCase.get_keys()
+        vals2 = UInt64StructHashmapTestCase.get_keys()
+        self._test_search(vals, vals2)
+
+    def test_search_on_mix_int_struct(self):
+        dtype = [('a', 'uint8'), ('b', 'int64'),
+                 ('c', 'uint64'), ('d', 'int8')]
+        vals = UInt64StructHashmapTestCase.get_keys(dtype=dtype)
+        vals2 = UInt64StructHashmapTestCase.get_keys(dtype=dtype)
+        self._test_search(vals, vals2)
+
+    def test_search_on_mix_tiny_types_struct(self):
+        n = 64  # only a few items since duplicates are more likely
+        dtype = [('a', 'uint8'), ('b', 'int8'), ('c', 'int8')]
+        vals = UInt64StructHashmapTestCase.get_keys(dtype=dtype, n=n)
+        vals2 = UInt64StructHashmapTestCase.get_keys(dtype=dtype, n=n)
+        self._test_search(vals, vals2)
+
+    def test_search_on_object(self):
+        vals = ObjectHashmapTestCase.get_keys()
+        vals2 = ObjectHashmapTestCase.get_keys()
+        self._test_search(vals, vals2)
+
+    @classmethod
+    def _test_search(cls, vals, vals2):
+        n = vals.size
+        # search itself
+        idx, found = search(vals, vals)
+        assert found.all()
+        assert (idx == numpy.arange(n)).all()
+        assert in1d(vals, vals).all()
+        # search half of itself within itself
+        idx, found = search(vals[:n//2], vals)
+        assert found.all()
+        assert (idx == numpy.arange(n//2)).all()
+        assert in1d(vals[:n//2], vals).all()
+        # search duplicate of itself within itself
+        dups = _cat(vals, vals)
+        idx, found = search(dups, vals)
+        assert found.all()
+        assert (idx[:n] == numpy.arange(n)).all()
+        assert (idx[n:] == numpy.arange(n)).all()
+        assert in1d(dups, vals).all()
+        # only not found
+        idx, found = search(vals2, vals)
+        assert not found.any()
+        assert not in1d(vals2, vals).any()
+        # mix found / not found
+        idx, found = search(_cat(vals, vals2), vals)
+        assert found[:n].all()
+        assert not found[n:].any()
+        assert (idx[:n] == numpy.arange(n)).all()
+        found = in1d(_cat(vals, vals2), vals)
+        assert found[:n].all()
+        assert not found[n:].any()
+        assert (numpy.invert(in1d(_cat(vals, vals2), vals))
+                == in1d(_cat(vals, vals2), vals, invert=True)).all()
+
+
+def test_cumcount_by_value():
+    input = numpy.asarray([0, 0, 0, 0, 1, 1, 1, 3, 3, 3, 3, 3])
+    expected = numpy.asarray([0, 1, 2, 3, 0, 1, 2, 0, 1, 2, 3, 4])
+    # sorted
+    assert (cumcount_by_value(input, assume_sorted=True) == expected).all()
+    # shuffled
+    numpy.random.shuffle(input)
+    output = cumcount_by_value(input)
+    for idx in range(4):
+        is_idx = input == idx
+        assert (output[is_idx] == numpy.arange(is_idx.sum())).all()

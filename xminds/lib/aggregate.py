@@ -1,5 +1,5 @@
 """
-Aggregage tools
+Aggregate tools
 ===============
 """
 import sys
@@ -66,7 +66,8 @@ def igroupby(ids, values, n=None, logging_prefix=None, assume_sorted=False,
                                   lambda x: x != current_id,
                                   offset=start_block,
                                   batch_size=find_next_lookup)
-                find_next_lookup = max(find_next_hint, 2 * (end_block - start_block))
+                find_next_lookup = max(
+                    find_next_hint, 2 * (end_block - start_block))
             except StopIteration:
                 end_block = n
             current_id_values = values[start_block:end_block]

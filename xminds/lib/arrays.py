@@ -3,181 +3,9 @@ Array tools
 ===========
 """
 import numpy
-from numpy.lib.recfunctions import unstructured_to_structured
 
-from .iterables import split
-
-
-def to_structured(arrays):
-    """
-    Casts list of array and names (and optional dtypes) to numpy structured array.
-
-    See `Numpy's documentation <https://numpy.org/doc/stable/user/basics.rec.html>`_
-    for how to use numpy's structured arrays.
-
-    A pandas DataFrame can be converted into a numpy record array,
-    using DataFrame.to_records() (`to_records documentation
-    <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_records.html>`_,
-    `documentation on record arrays
-    <https://numpy.org/doc/stable/user/basics.rec.html#record-arrays>`_).
-    A record array can then be converted into a structured array by using:
-
-    >>> recordarr.view(recordarr.dtype.fields, numpy.ndarray)
-
-    :param list-of-tuple arrays: ``list((name, array-like, *dtype-infos)))``
-        or ``{name: array-like}``.
-        A lone value will be broadcasted as an array full of this value
-        and of the size of the other arrays
-    :returns: struct-array
-
-    Examples
-    ________
-    >>> to_structured([
-    >>>     ('a', numpy.arange(5), 'uint32'),
-    >>>     ('b', 2 * numpy.arange(5), 'float32')
-    >>> ])
-    array([(0, 0.), (1, 2.), (2, 4.), (3, 6.), (4, 8.)],
-      dtype=[('a', '<u4'), ('b', '<f4')])
-
-    A single value can also be used, and will be broadcasted as an array full of this value,
-    and of the size of the other arrays, for instance:
-
-    >>> to_structured([
-    >>>     ('a', numpy.arange(5), 'uint32'),
-    >>>     ('b', 2, 'float32')
-    >>> ])
-    array([(0, 2.), (1, 2.), (2, 2.), (3, 2.), (4, 2.)],
-      dtype=[('a', '<u4'), ('b', '<f4')])
-
-    Not specifying the dtype in the tuples will cause the function to use the array's dtype,
-    or to infer it in case of sequences of Python objects.
-
-    >>> to_structured([
-    >>>    ('a', numpy.arange(5, dtype='uint32')),
-    >>>    ('b', [2 * i for i in range(5)])
-    >>> ])
-    array([(0, 0), (1, 2), (2, 4), (3, 6), (4, 8)],
-      dtype=[('a', '<u4'), ('b', '<i8')])
-
-    Using dictionaries:
-
-    >>> to_structured({
-    >>>     'a': numpy.arange(5, dtype='uint32'),
-    >>>     'b': [2 * i for i in range(5)]
-    >>> })
-    array([(0, 0), (1, 2), (2, 4), (3, 6), (4, 8)],
-      dtype=[('a', '<u4'), ('b', '<i8')])
-
-    (n, m) 2D numpy arrays are viewed as (n,) arrays of (m,) 1D arrays:
-
-    >>> to_structured([
-    >>> ('a', numpy.arange(5)),
-    >>> ('b', numpy.arange(15).reshape(5, 3))
-    >>> ])
-    array([(0, [ 0,  1,  2]), (1, [ 3,  4,  5]), (2, [ 6,  7,  8]),
-       (3, [ 9, 10, 11]), (4, [12, 13, 14])],
-      dtype=[('a', '<i8'), ('b', '<i8', (3,))])
-    """
-    if isinstance(arrays, dict):
-        arrays = arrays.items()
-    else:
-        assert isinstance(arrays, list), (
-            'arrays must be a dict or a list, not {}'.format(type(arrays)))
-    all_n_rows = {len(a) for _, a, *_ in arrays if hasattr(a, '__len__')}
-    if len(all_n_rows) > 1:
-        raise ValueError('all arrays must have the same shape[0], got: {}'.format(all_n_rows))
-    n_rows, = all_n_rows
-    # set default dtype
-    dtypes = []
-    for t in arrays:
-        name, array = t[:2]
-        if len(t) >= 3:  # given dtype infos
-            dtype_infos = t[2:]
-        else:  # infer dtype and shape
-            array = numpy.asarray(array)
-            if len(array.shape) == 1:
-                dtype_infos = (array.dtype,)
-            else:
-                # do not use e.g. ('int', 3) but always '(3,)int' because the former flattens '1'
-                dtype_infos = (f'{array.shape[1:]}{array.dtype}',)
-        dtypes.append((name,) + dtype_infos)
-    # combine to structured-array
-    out = numpy.empty(n_rows, dtype=dtypes)
-    for t in arrays:
-        out[t[0]] = t[1]
-    return out
-
-
-def set_or_add_to_structured(array, data, copy=True):
-    """
-    Updates existing structured array, either by replacing the data for an existing field,
-    or by adding a new field to the array
-
-    :param struct-array array: array to update
-    :param list-of-tuple data: list((name, array))
-    :param bool? copy: set to False to avoid copy when possible ``(default: True)``
-    :returns: struct-array
-
-    Examples
-    ________
-    Adding field to existing structured array:
-
-    >>> array = to_structured([
-    >>>     ('a', numpy.arange(5, dtype='uint8')),
-    >>>     ('b', 2 * numpy.arange(5, dtype='uint16')),
-    >>> ])
-    >>> new_data = 3 * numpy.arange(5, dtype='float32')
-    >>> updated_array = set_or_add_to_structured(array, [
-    >>>     ('c', new_data),
-    >>> ])
-    >>> updated_array
-    array([(0, 0,  0.), (1, 2,  3.), (2, 4,  6.), (3, 6,  9.), (4, 8, 12.)],
-      dtype=[('a', 'u1'), ('b', '<u2'), ('c', '<f4')])
-
-    Replacing data from a structured array:
-
-    >>> updated_array = set_or_add_to_structured(array, [
-    >>>     ('b', new_data)
-    >>> ])
-    array([(0,  0), (1,  3), (2,  6), (3,  9), (4, 12)],
-      dtype=[('a', 'u1'), ('b', '<u2')])
-
-    Or doing both:
-
-    >>> updated_array = set_or_add_to_structured(array, [
-    >>>     ('b', new_data),
-    >>>     ('c', 2 * new_data)
-    >>> ])
-    array([(0,  0,  0.), (1,  3,  6.), (2,  6, 12.), (3,  9, 18.),
-       (4, 12, 24.)], dtype=[('a', 'u1'), ('b', '<u2'), ('c', '<f4')])
-    """
-    existing, new = split(data, lambda t: t[0] in array.dtype.names)
-    if existing:
-        if copy:
-            array = array.copy()
-        for k, v in existing:
-            array[k] = v
-    if new:
-        arrays = [array]
-        for name, data in new:
-            if len(data.shape) == 1:
-                data = data.astype([(name, data.dtype)])
-            else:
-                # pack 2d arrays into structure
-                dtype = numpy.dtype([(name, data.dtype, data.shape[1:])])
-                data = unstructured_to_structured(data, dtype)
-            arrays.append(data)
-        all_dtypes = [
-            (name, a.dtype.fields[name][0])
-            for a in arrays
-            for name in a.dtype.names
-        ]
-        # ``merge_arrays`` is really slow, so we copy manually
-        array = numpy.empty(array.size, dtype=all_dtypes)
-        for a in arrays:
-            for name in a.dtype.names:
-                array[name] = a[name]
-    return array
+from xminds._lib.hashmap import Hashmap, factorize
+from .arraybase import set_or_add_to_structured, to_structured
 
 
 def structured_arrays_mean(arrays, keep_missing=False):
@@ -232,9 +60,11 @@ def structured_arrays_mean(arrays, keep_missing=False):
     """
     fields0 = set(arrays[0].dtype.names)
     if not keep_missing:
-        fields_set = fields0.intersection(*(set(array.dtype.names) for array in arrays[1:]))
+        fields_set = fields0.intersection(
+            *(set(array.dtype.names) for array in arrays[1:]))
     else:
-        fields_set = fields0.union(*(set(array.dtype.names) for array in arrays[1:]))
+        fields_set = fields0.union(*(set(array.dtype.names)
+                                     for array in arrays[1:]))
     return to_structured([
         (
             field,
@@ -287,7 +117,7 @@ def first(a, predicate=None, batch_size=None, offset=0):
     >>> idx = first(mask)
     3
     """
-    batch_size = batch_size or (1<<12)
+    batch_size = batch_size or (1 << 12)
     n, = a.shape
     assert predicate is not None or a.dtype == '?', (
         'first without a predicate can only be used on an array of booleans')
@@ -457,7 +287,8 @@ def kargmax(a, k, axis=0, do_sort=False):
             rows = numpy.indices(topk.shape)[0]
             args = numpy.argsort(-a[rows, topk], axis=1)
             return topk[rows, args]
-    raise NotImplementedError('`kargmax` with `do_sort` only supports 1d or 2d')
+    raise NotImplementedError(
+        '`kargmax` with `do_sort` only supports 1d or 2d')
 
 
 def kargmin(a, k, axis=0, do_sort=False):
@@ -533,4 +364,127 @@ def kargmin(a, k, axis=0, do_sort=False):
             rows = numpy.indices(topk.shape)[0]
             args = numpy.argsort(a[rows, topk], axis=1)
             return topk[rows, args]
-    raise NotImplementedError('`kargmin` with `do_sort` only supports 1d or 2d')
+    raise NotImplementedError(
+        '`kargmin` with `do_sort` only supports 1d or 2d')
+
+
+def in1d(needles, haystack, invert=False):
+    """
+    Test whether each element of a 1d array is also present in a second 1d array.
+
+    :param array needles: (n1,) dtype array
+    :param array haystack: (n2,) dtype array
+    :param bool? invert: if True, the values in the returned array are inverted,
+        ``in1d(a, b, invert=True)`` is equivalent to ``~in1d(a, b)``. (``default: False``)
+    :returns: (n1,) bool array
+
+    Example
+    _______
+    >>> needles = numpy.array([5,10,20])
+    >>> haystack = numpy.arange(15)
+    >>> in1d(needles, haystack)
+    array([True, True, False])
+    >>> in1d(needles, haystack, invert=True)
+    array([False, False, True])
+    """
+    if invert:
+        return ~Hashmap(haystack).contains(needles)
+    return Hashmap(haystack).contains(needles)
+
+
+def search(needles, haystack, idx_dtype='uint32'):
+    """
+    Return whether each element of a 1d array is present in a second 1d array
+    and the corresponding indexes.
+
+    If an element of ``needles`` is not found in ``haystack``, the corresponding value
+    returned in ``indexes`` is 0.
+
+    :param array needles: (n1,) dtype array
+    :param array haystack: (n2,) dtype array
+    :param dtype? idx_dtype: (``default: uint32``)
+    :returns: tuple(
+        indexes: (n1,) idx_dtype array <n2 of indexes in haystack,
+        found: (n1,) bool array,)
+
+    Example
+    _______
+    >>> needles = numpy.array([1000, 2000, 3000])
+    >>> haystack = numpy.arange(50)
+    >>> haystack[10] = needles[0]
+    >>> haystack[20] = needles[1]
+    >>> search(needles, haystack)
+    (array([10, 20,  0], dtype=uint32), array([ True,  True, False]))
+    """
+    hashmap = Hashmap(haystack, numpy.arange(haystack.size, dtype=idx_dtype))
+    idx, found = hashmap.get_many(needles)
+    return idx, found
+
+
+def cumcount_by_value(values, assume_sorted=False):
+    """
+    Compute the rank of appearance of entries grouped by input value.
+
+    If a value appears for the 5th time in the ``values`` array at index ``i``,
+    ``output[i]`` will be a 5.
+
+    :param array values: uint32 array
+    :param bool? assume_sorted: if True, the input values are assumed sorted (``default: False``)
+    :returns: array of int
+
+    Example
+    _______
+    >>> array = numpy.array([0, 0, 0, 0, 1, 1, 1, 3, 3, 3, 3, 3])
+    >>> cumcount_by_value(array)
+    array([0, 1, 2, 3, 0, 1, 2, 0, 1, 2, 3, 4])
+    >>> array = numpy.array(['beta', 'alpha', 'gamma', 'alpha', 'beta', 'alpha', 'delta'])
+    >>> cumcount_by_value(array)
+    array([0, 0, 0, 1, 1, 2, 0])
+    """
+    if len(values) == 0:
+        return []
+    convert = True
+    if values.dtype.kind in 'ui':
+        if min(values) >= 0 and max(values) < (1 << 6) * len(values):
+            convert = False
+    if not assume_sorted:
+        argsort = numpy.argsort(values, kind='stable')
+        values = values[argsort]
+    if convert:
+        values, _, _ = factorize(values)
+    # values        0 0 0 0 1 1 1 3 3 3 3 3
+    # n_per_idx     4 3 0 5
+    n_per_idx = numpy.bincount(values)
+    # rank          0 1 2 3 0 1 2 0 1 2 3 4
+    rank = _arange_sequence(n_per_idx)
+    if assume_sorted:
+        return rank
+    # reverse argsort
+    out = numpy.empty_like(rank)
+    out[argsort] = rank
+    return out
+
+
+def _arange_sequence(lengths):
+    """
+    :param array lengths: int array like [4 3 0 5]
+    :returns: concat(arange(i) for i length) like [0 1 2 3 0 1 2 0 1 2 3 4]
+    """
+    # lengths     4 3 0 5
+    # cum_counts  0 4 7 7 12
+    cum_counts = numpy.zeros(lengths.size + 1, dtype=lengths.dtype)
+    numpy.cumsum(lengths, out=cum_counts[1:])
+    # offset      0 0 0 0 4 4 4 7 7 7 7 7
+    offset = numpy.repeat(cum_counts[:-1], lengths)
+    # out         0 1 2 3 0 1 2 0 1 2 3 4
+    return numpy.arange(offset.size) - offset
+
+
+def unique_count(values):
+    """
+    Count the number of unique elements in ``values``.
+
+    :param array values: (n,) dtype array
+    :returns: int number of unique values
+    """
+    return Hashmap(keys=values, values=None).n_used

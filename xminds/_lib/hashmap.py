@@ -2,13 +2,12 @@ import numpy
 import warnings
 
 from .compat import structured_cast
-from ..lib.arrays import set_or_add_to_structured, to_structured
+# from .logger import logger
+from ..lib.arraybase import set_or_add_to_structured, to_structured
 
 # Pure numpy implementation of hashmaps
 # This file implements low level classes, but as a user you should try to use:
 #    unique, unique_count, search, get_dense_labels_map, factorize or Hashmap
-# also consider using xmlib.indexedarray which wrap around Hashmap
-# and covers most of their use cases with high level methods
 
 UINT64 = numpy.uint64
 INV_PHI = UINT64(11400714819323198485)  # 1<<64/phi
@@ -37,8 +36,8 @@ class _BaseHashmap(object):
         """
         :param array keys: (n,) key-dtype array
         :param array? values: (n,) val-dtype array
-        :param dtype? cast_dtype: dtype to cast `keys`
-        :param dtype? view_dtype: dtype to view `keys`
+        :param dtype? cast_dtype: dtype to cast ``keys``
+        :param dtype? view_dtype: dtype to view ``keys``
         :param int? empty: empty value (default: 0)
         """
         original_dtype = keys.dtype
@@ -51,8 +50,10 @@ class _BaseHashmap(object):
         log_size = (cls.init_space_ratio(n) * n - 1).bit_length()
         size = 1 << log_size
         table = numpy.full(size, empty, dtype=view_dtype)
-        values_table = numpy.zeros(size, dtype=values.dtype) if values is not None else None
-        hashmap = cls(table, values_table, empty, log_size, original_dtype, cast_dtype)
+        values_table = numpy.zeros(
+            size, dtype=values.dtype) if values is not None else None
+        hashmap = cls(table, values_table, empty,
+                      log_size, original_dtype, cast_dtype)
         hashmap._set_initial(_keys, values)
         return hashmap
 
@@ -97,7 +98,8 @@ class _BaseHashmap(object):
         """
         _keys = self._cast(keys, self.cast_dtype, self._table.dtype)
         if values is not None and self.values.dtype.names:
-            values = values[[k for k in self.values.dtype.names]]  # align fields
+            # align fields
+            values = values[[k for k in self.values.dtype.names]]
         if _keys.size > 0 and (_keys == self._empty).any():
             self._change_empty(_keys)
         n, = _keys.shape
@@ -125,7 +127,8 @@ class _BaseHashmap(object):
                 values = values[collisions]
             indexes = self._shifted_hash(_keys, step)
         if not done:
-            raise RuntimeError('could not set_many within {} steps'.format(max_steps))
+            raise RuntimeError(
+                'could not set_many within {} steps'.format(max_steps))
         self.n_used = (self._table != self._empty).sum()
 
     def search(self, keys):
@@ -140,7 +143,8 @@ class _BaseHashmap(object):
         if _keys.size > 0 and (_keys == self._empty).any():
             self._change_empty(_keys)
         n, = _keys.shape
-        idx_in_all = None  # working idx in all (lazy build at first collisions)
+        # working idx in all (lazy build at first collisions)
+        idx_in_all = None
         # step=0
         step = UINT64(0)
         all_indexes = self._shifted_hash(_keys, step)
@@ -168,7 +172,8 @@ class _BaseHashmap(object):
             found = table_values != self._empty
             all_found[idx_in_all] = found
         if not done:
-            raise RuntimeError('could not search within {} steps'.format(max_steps))
+            raise RuntimeError(
+                'could not search within {} steps'.format(max_steps))
         return all_indexes, all_found
 
     def contains(self, keys):
@@ -188,7 +193,8 @@ class _BaseHashmap(object):
         )
         """
         if self.values is None:
-            raise ValueError('`get_many` is only available when values is not None, use `search`')
+            raise ValueError(
+                '`get_many` is only available when values is not None, use `search`')
         indexes, found = self.search(keys)
         values = self.values[indexes]
         return values, found
@@ -236,7 +242,7 @@ class _BaseHashmap(object):
     @classmethod
     def max_steps(cls, n):
         """ prevent infinite loop by a cap on the nb of steps (heuristic but very large) """
-        return max(64, n//(32 * cls.init_space_ratio(n)))
+        return max(64, n // (32 * cls.init_space_ratio(n)))
 
     def _resize(self, n):
         log_size = int(self.init_space_ratio(n) * n - 1).bit_length()
@@ -252,7 +258,8 @@ class _BaseHashmap(object):
         self.log_size = log_size
         self.shift = UINT64(64 - self.log_size)
         new_size = 1 << log_size
-        self._table = numpy.full(new_size, self._empty, dtype=self._table.dtype)
+        self._table = numpy.full(
+            new_size, self._empty, dtype=self._table.dtype)
         if values is not None:
             self.values = numpy.zeros(new_size, dtype=values.dtype)
         self._set_initial(_keys, values)
@@ -277,14 +284,16 @@ class _BaseHashmap(object):
             _keys = _keys[collisions]
             if values is not None:
                 values = values[collisions]
-            indexes = self._shifted_hash(_keys, step)  # TOOPTIMIZE re-use computed hashes
+            # TOOPTIMIZE re-use computed hashes
+            indexes = self._shifted_hash(_keys, step)
             available = self._table[indexes] == self._empty
             available_indexes = indexes[available]
             self._table[available_indexes] = _keys[available]
             if values is not None:
                 self.values[available_indexes] = values[available]
         if not done:
-            raise RuntimeError('could not _set_initial within {} steps'.format(max_steps))
+            raise RuntimeError(
+                'could not _set_initial within {} steps'.format(max_steps))
         self.n_used = (self._table != self._empty).sum()
 
     def _change_empty(self, new_keys):
@@ -309,7 +318,8 @@ class _BaseHashmap(object):
         if copy:
             _keys = _keys.copy()
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', r'overflow encountered in ulong(long)?_scalars')
+            warnings.filterwarnings(
+                'ignore', r'overflow encountered in ulong(long)?_scalars')
             _keys += STEP_MULT * step
             _keys *= INV_PHI
             return _keys
@@ -337,7 +347,7 @@ class _BaseHashmap(object):
 class UInt64Hashmap(_BaseHashmap):
     """
     a mapping from uint64 to arbitrary values in a numpy array
-    consider using the higher-level `Hashmap` instead
+    consider using the higher-level ``Hashmap`` instead
     """
 
     @classmethod
@@ -345,8 +355,8 @@ class UInt64Hashmap(_BaseHashmap):
         """
         :param array keys: (n,) uint64 array
         :param array? values: (n,) val-dtype array
-        :param dtype? cast_dtype: dtype to cast `keys` (default: uint64)
-        :param dtype? view_dtype: dtype to view `keys` (default: uint64)
+        :param dtype? cast_dtype: dtype to cast ``keys`` (default: uint64)
+        :param dtype? view_dtype: dtype to view ``keys`` (default: uint64)
         :param object? empty: empty value (default: row of 0)
         """
         cast_dtype = cast_dtype or UINT64
@@ -371,7 +381,8 @@ class UInt64Hashmap(_BaseHashmap):
             return zero
         # otherwise pick a random number
         while True:
-            empty = numpy.random.randint(low=1<<62, high=1<<63, dtype='uint64')
+            empty = numpy.random.randint(
+                low=1<<62, high=1<<63, dtype='uint64')
             if empty not in _keys:
                 return empty
 
@@ -381,7 +392,8 @@ class UInt64StructHashmap(_BaseHashmap):
     a mapping from uint64-struct to arbitrary values in a numpy array
     consider using the higher-level `Hashmap` instead
     """
-    _PRIME_1 = UINT64(11400714785074694791)  # almost INV_PHI but different one (used in xxhash.c)
+    # almost INV_PHI but different one (used in xxhash.c)
+    _PRIME_1 = UINT64(11400714785074694791)
     _PRIME_2 = UINT64(14029467366897019727)
     _PRIME_5 = UINT64(2870177450012600261)
 
@@ -390,12 +402,16 @@ class UInt64StructHashmap(_BaseHashmap):
         """
         :param array keys: (n,) uint64-struct array
         :param array? values: (n,) val-dtype array
-        :param dtype? cast_dtype: dtype to cast `keys` (default: uint64 for each field)
-        :param dtype? view_dtype: dtype to view `keys` (default: uint64 for each field)
+        :param dtype? cast_dtype: dtype to cast ``keys`` (default: uint64 for each field)
+        :param dtype? view_dtype: dtype to view ``keys`` (default: uint64 for each field)
         :param object? empty: empty value (default: row of 0)
         """
-        cast_dtype = cast_dtype or [(name, 'uint64') for name in keys.dtype.names]
-        view_dtype = view_dtype or [(name, 'uint64') for name in keys.dtype.names]
+        cast_dtype = cast_dtype or [
+            (name, 'uint64') for name in keys.dtype.names
+        ]
+        view_dtype = view_dtype or [
+            (name, 'uint64') for name in keys.dtype.names
+        ]
         return super(UInt64StructHashmap, cls).new(keys, values, cast_dtype, view_dtype, empty)
 
     @classmethod
@@ -445,7 +461,7 @@ class UInt64StructHashmap(_BaseHashmap):
 class ObjectHashmap(_BaseHashmap):
     """
     a mapping from arbitrary keys to arbitrary values in a numpy array
-    consider using the higher-level `Hashmap` instead
+    consider using the higher-level ``Hashmap`` instead
     """
 
     @classmethod
@@ -453,8 +469,8 @@ class ObjectHashmap(_BaseHashmap):
         """
         :param array keys: (n,) object array
         :param array? values: (n,) val-dtype array
-        :param dtype? cast_dtype: dtype to cast `keys` (default: keys.type)
-        :param dtype? view_dtype: dtype to view `keys` (default: keys.type)
+        :param dtype? cast_dtype: dtype to cast ``keys`` (default: keys.type)
+        :param dtype? view_dtype: dtype to view ``keys`` (default: keys.type)
         :param object? empty: empty value (default: row of 0)
         """
         cast_dtype = cast_dtype or keys.dtype
@@ -502,7 +518,7 @@ def Hashmap(keys, values=None):
 
 def _get_optimal_cast(dtype):
     """
-    select best hashmap type to fit `dtype`
+    select best hashmap type to fit ``dtype``
     :returns: cls, cast_dtype, view_dtype
     """
     kind = dtype.kind
@@ -559,7 +575,8 @@ def unique(values, return_inverse=False, return_index=False):
         [if return_index=1] unique_idx: (n2,) uint32 array of indexes <= n,
     )
     """
-    _vals = numpy.arange(values.size, dtype='uint32') if return_index or return_inverse else None
+    _vals = numpy.arange(
+        values.size, dtype='uint32') if return_index or return_inverse else None
     hashmap = Hashmap(keys=values, values=_vals)
     unique_values, table_mask = hashmap.unique_keys(return_table_mask=True)
     if not return_inverse and not return_index:
@@ -579,46 +596,9 @@ def unique(values, return_inverse=False, return_index=False):
     return out
 
 
-def unique_count(values):
-    """
-    :param array values: (n,) dtype array
-    :returns: int number of unique values
-    """
-    return Hashmap(keys=values, values=None).n_used
-
-
-def search(needles, haystack, idx_dtype='uint32'):
-    """
-    :param array needles: (n1,) dtype array
-    :param array haystack: (n2,) dtype array
-    :param dtype? idx_dtype: (default: uint32)
-    :returns: tuple(
-        indexes: (n1,) idx_dtype array <n2 of indexes in haystack,
-        found: (n1,) bool array,
-    )
-    """
-    hashmap = Hashmap(haystack, numpy.arange(haystack.size, dtype=idx_dtype))
-    idx, found = hashmap.get_many(needles)
-    return idx, found
-
-
-def in1d(needles, haystack, invert=False):
-    """
-    :param array needles: (n1,) dtype array
-    :param array haystack: (n2,) dtype array
-    :param bool? invert: (default: False) if True, the values in the returned array
-                         are inverted (in1d(a, b, invert=True)) is equivalent to ~in1d(a, b)
-    :returns: (n1,) bool array
-    """
-    if invert:
-        return ~Hashmap(haystack).contains(needles)
-    return Hashmap(haystack).contains(needles)
-
-
 def get_dense_labels_map(values, idx_dtype='uint32'):
     """
     convert unique values into dense int labels [0..n_uniques]
-    consider using `xmlib.IndexedArray` for advanced features
     :param array values: (n,) dtype array
     :param dtype? idx_dtype: (default: 'uint32')
     :returns: tuple(
@@ -638,7 +618,6 @@ def get_dense_labels_map(values, idx_dtype='uint32'):
 def factorize(values):
     """
     Build dense int labels maps and return labels
-    consider using `xmlib.IndexedArray` for advanced features
     :param array values: (n,) dtype array
     :returns: tuple(
         labels: (n,) int array,
@@ -655,11 +634,10 @@ def factorize(values):
 def update_dense_labels_map(hashmap, values):
     """
     update hashmap values -> dense labels, and return mapped values
-    consider using `xmlib.IndexedArray` for advanced features
     :param HashMap hashmap: HashMap(dtype->int)
     :param array values: (n,) dtype array
     :returns: (n,) int array
-    :changes: update `hashmap` in-place
+    :changes: update ``hashmap`` in-place
     """
     # get current values
     labels, found = hashmap.get_many(values)
@@ -667,7 +645,8 @@ def update_dense_labels_map(hashmap, values):
     if not new_values.size:
         return labels
     # check unique new values
-    unique_new_values, new_values_idx_in_uniques = unique(new_values, return_inverse=True)
+    unique_new_values, new_values_idx_in_uniques = unique(
+        new_values, return_inverse=True)
     # build new labels
     idx_dtype = hashmap.values.dtype
     _, current_labels = hashmap.unique_keys(return_values=True)
@@ -675,7 +654,8 @@ def update_dense_labels_map(hashmap, values):
         start_at = 0
     else:
         start_at = current_labels.max() + 1
-    new_labels = numpy.arange(start_at, start_at + unique_new_values.shape[0], dtype=idx_dtype)
+    new_labels = numpy.arange(
+        start_at, start_at + unique_new_values.shape[0], dtype=idx_dtype)
     hashmap.set_many(unique_new_values, new_labels)
     # return all labels
     labels, found = hashmap.get_many(values)
@@ -698,8 +678,7 @@ def empty_hashmap(key_dtype, val_dtype='uint32'):
 def reverse_values2labels(values2labels, dtype=None):
     """
     Reverse a hashmap values2labels.
-    Normally you should not call this function but use the values provided in `factorize`
-    Consider using `xmlib.IndexedArray` for advanced features
+    Normally you should not call this function but use the values provided in ``factorize``
     :param Hashmap values2labels: labels hashmap with n items
     :param dtype? dtype:
     :returns: (n,) dtype array
