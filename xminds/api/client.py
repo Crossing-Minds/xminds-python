@@ -1027,6 +1027,27 @@ class CrossingMindsApiClient:
         path = f'users/{user_id}/ratings/'
         return self.api.delete(path=path)
 
+    # === Data Dump Storage ===
+
+    @require_login
+    def get_data_dump_signed_urls(self, name, content_type, resource):
+        """
+        Get signed url to upload a file. (url_upload and url_report)
+
+        :param str? name: filename
+        :param str? content_type:
+        :param str? resource: values allowed are `items`, `users`, `ratings` and `ratings_implicit`.
+        :returns: {
+            'url_upload': str,
+            'url_report': str,
+        }
+        """
+        path = f'data-dump-storage/signed-url/'
+        params = {'name': name,
+                  'content_type': content_type,
+                  'resource': resource}
+        return self.api.get(path=path, params=params)
+
     # === Scheduled Background Tasks ===
 
     @require_login
