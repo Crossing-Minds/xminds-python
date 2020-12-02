@@ -139,9 +139,10 @@ class CrossingMindsApiPythonRequest(_BaseCrossingMindsApiRequest):
     _REQUEST_KWARGS = {
         'stream': True,
     }
+    PICKLE_PROTOCOL = 4
 
     def _serialize_data(self, data):
-        return pickle.dumps(data)
+        return pickle.dumps(data, protocol=self.PICKLE_PROTOCOL)
 
     def _parse_response(self, response, fallback=False):
         if response.status_code == 204:
