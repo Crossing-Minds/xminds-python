@@ -1251,7 +1251,7 @@ class CrossingMindsApiClient:
 
     def _base_field_id(self, data, field, cast_func):
         if not self.b64_encode_bytes:
-            return
+            return data
         d_type = self._database[f'{field}_id_type']
         if d_type.startswith(('bytes', 'uuid', 'hex', 'urlsafe')):
             if isinstance(data, list):
