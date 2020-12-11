@@ -11,6 +11,7 @@ from functools import wraps
 import logging
 import sys
 import time
+from urllib.parse import quote
 from binascii import Error as BinasciiError
 
 import numpy
@@ -446,7 +447,7 @@ class CrossingMindsApiClient:
             'repeated': bool,
         }
         """
-        path = f'users-properties/{property_name}/'
+        path = f'users-properties/{self.escape_url(property_name)}/'
         return self.api.get(path=path)
 
     @require_login
@@ -489,7 +490,7 @@ class CrossingMindsApiClient:
 
         :param str property_name: property name
         """
-        path = f'users-properties/{property_name}/'
+        path = f'users-properties/{self.escape_url(property_name)}/'
         return self.api.delete(path=path)
 
     # === User ===
@@ -625,7 +626,7 @@ class CrossingMindsApiClient:
             'repeated': bool,
         }
         """
-        path = f'items-properties/{property_name}/'
+        path = f'items-properties/{self.escape_url(property_name)}/'
         return self.api.get(path=path)
 
     @require_login
@@ -668,7 +669,7 @@ class CrossingMindsApiClient:
 
         :param str property_name: property name
         """
-        path = f'items-properties/{property_name}/'
+        path = f'items-properties/{self.escape_url(property_name)}/'
         return self.api.delete(path=path)
 
     # === Item ===
@@ -1087,7 +1088,7 @@ class CrossingMindsApiClient:
         :raises: DuplicatedError with error name 'TASK_ALREADY_RUNNING'
             if this task is already running
         """
-        path = f'tasks/{task_name}/'
+        path = f'tasks/{self.escape_url(task_name)}/'
         return self.api.post(path=path, data={})
 
     @require_login
@@ -1104,7 +1105,7 @@ class CrossingMindsApiClient:
             }],
         }
         """
-        path = f'tasks/{task_name}/recents/'
+        path = f'tasks/{self.escape_url(task_name)}/recents/'
         return self.api.get(path=path)
 
     def wait_until_ready(self, timeout=600, sleep=1):
@@ -1288,6 +1289,9 @@ class CrossingMindsApiClient:
             return base64.b64decode(data, b'-_')
         except BinasciiError:
             raise TypeError()
+
+    def escape_url(self, param):
+        return quote(param, safe='')
 
     def _get_latest_task_progress_message(self, task_name,
                                           default=None, default_running=None, default_failed=None):
