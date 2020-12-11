@@ -11,6 +11,7 @@ from functools import wraps
 import logging
 import sys
 import time
+from binascii import Error as BinasciiError
 
 import numpy
 
@@ -241,7 +242,7 @@ class CrossingMindsApiClient:
 
     def _login(self, path, data, frontend_user_id):
         if frontend_user_id:
-            data['frontend_user_id'] = frontend_user_id
+            data['frontend_user_id'] = self._userid2body(frontend_user_id)
         resp = self.api.post(path=path, data=data)
         jwt_token = resp['token']
         self.set_jwt_token(jwt_token)
@@ -508,7 +509,9 @@ class CrossingMindsApiClient:
         """
         user_id = self._userid2url(user_id)
         path = f'users/{user_id}/'
-        return self.api.get(path=path)
+        resp = self.api.get(path=path)
+        resp['user']['user_id'] = self._body2userid(resp['user']['user_id'])
+        return resp
 
     @require_login
     def list_users_paginated(self, amt=None, cursor=None):
@@ -539,7 +542,9 @@ class CrossingMindsApiClient:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
-        return self.api.get(path=path, params=params)
+        resp = self.api.get(path=path, params=params)
+        resp['users'] = self._body2userid(resp['users'])
+        return resp
 
     @require_login
     def create_or_update_user(self, user):
@@ -601,7 +606,7 @@ class CrossingMindsApiClient:
                     ]
                 users_m2m_chunk.append({'name': m2m['name'], 'array': array_chunk})
             data = {
-                'users': users_chunk,
+                'users': self._userid2body(users_chunk),
                 'users_m2m': users_m2m_chunk,
             }
             self.api.put(path=path, data=data, timeout=60)
@@ -683,7 +688,9 @@ class CrossingMindsApiClient:
         """
         item_id = self._itemid2url(item_id)
         path = f'items/{item_id}/'
-        return self.api.get(path=path)
+        resp = self.api.get(path=path)
+        resp['item']['item_id'] = self._body2itemid(resp['item']['item_id'])
+        return resp
 
     @require_login
     def list_items(self, items_id):
@@ -706,9 +713,12 @@ class CrossingMindsApiClient:
                 }
         }
         """
+        items_id = self._itemid2body(items_id)
         path = f'items-bulk/list/'
         data = {'items_id': items_id}
-        return self.api.post(path=path, data=data)
+        resp = self.api.post(path=path, data=data)
+        resp['items'] = self._body2itemid(resp['items'])
+        return resp
 
     @require_login
     def list_items_paginated(self, amt=None, cursor=None):
@@ -739,7 +749,9 @@ class CrossingMindsApiClient:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
-        return self.api.get(path=path, params=params)
+        resp = self.api.get(path=path, params=params)
+        resp['items'] = self._body2itemid(resp['items'])
+        return resp
 
     @require_login
     def create_or_update_item(self, item):
@@ -801,7 +813,7 @@ class CrossingMindsApiClient:
                     ]
                 items_m2m_chunk.append({'name': m2m['name'], 'array': array_chunk})
             data = {
-                'items': items_chunk,
+                'items': self._itemid2body(items_chunk),
                 'items_m2m': items_m2m_chunk,
             }
             self.api.put(path=path, data=data, timeout=60)
@@ -831,7 +843,9 @@ class CrossingMindsApiClient:
             params['cursor'] = cursor
         if filters:
             params['filters'] = filters
-        return self.api.get(path=path, params=params)
+        resp = self.api.get(path=path, params=params)
+        resp['items_id'] = self._body2itemid(resp['items_id'])
+        return resp
 
     # === Reco: Session-to-item ===
 
@@ -855,7 +869,7 @@ class CrossingMindsApiClient:
         path = f'recommendation/sessions/items/'
         data = {}
         if ratings is not None:
-            data['ratings'] = ratings
+            data['ratings'] = self._itemid2body(ratings)
         if user_properties:
             data['user_properties'] = user_properties
         if amt:
@@ -866,7 +880,9 @@ class CrossingMindsApiClient:
             data['filters'] = filters
         if exclude_rated_items is not None:
             data['exclude_rated_items'] = exclude_rated_items
-        return self.api.post(path=path, data=data)
+        resp = self.api.post(path=path, data=data)
+        resp['items_id'] = self._body2itemid(resp['items_id'])
+        return resp
 
     # === Reco: User-to-item ===
 
@@ -897,7 +913,9 @@ class CrossingMindsApiClient:
             params['filters'] = filters
         if exclude_rated_items is not None:
             params['exclude_rated_items'] = exclude_rated_items
-        return self.api.get(path=path, params=params)
+        resp = self.api.get(path=path, params=params)
+        resp['items_id'] = self._body2itemid(resp['items_id'])
+        return resp
 
     # === User Ratings ===
 
@@ -935,7 +953,7 @@ class CrossingMindsApiClient:
         user_id = self._userid2url(user_id)
         path = f'users/{user_id}/ratings/'
         data = {
-            'ratings': ratings,
+            'ratings': self._itemid2body(ratings),
         }
         return self.api.put(path=path, data=data, timeout=10)
 
@@ -951,8 +969,10 @@ class CrossingMindsApiClient:
         path = f'ratings-bulk/'
         n_chunks = int(numpy.ceil(len(ratings) / chunk_size))
         for i in tqdm(range(n_chunks), disable=(True if n_chunks < 4 else None)):
+            ratings_chunk = ratings[i*chunk_size:(i+1)*chunk_size]
+            ratings_chunk = self._userid2body(self._itemid2body(ratings_chunk))
             data = {
-                'ratings': ratings[i*chunk_size:(i+1)*chunk_size],
+                'ratings': ratings_chunk,
             }
             self.api.put(path=path, data=data, timeout=60)
         return
@@ -979,7 +999,9 @@ class CrossingMindsApiClient:
             params['amt'] = amt
         if page:
             params['page'] = page
-        return self.api.get(path=path, params=params)
+        resp = self.api.get(path=path, params=params)
+        resp['user_ratings'] = self._body2itemid(resp['user_ratings'])
+        return resp
 
     @require_login
     def list_ratings(self, amt=None, cursor=None):
@@ -1001,7 +1023,9 @@ class CrossingMindsApiClient:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
-        return self.api.get(path=path, params=params)
+        resp = self.api.get(path=path, params=params)
+        resp['ratings'] = self._body2userid(self._body2itemid(resp['ratings']))
+        return resp
 
     @require_login
     def delete_rating(self, user_id, item_id):
@@ -1203,17 +1227,67 @@ class CrossingMindsApiClient:
     def _userid2url(self, user_id):
         """ base64 encode if needed """
         if self._database['user_id_type'].startswith('bytes'):
-            return self._b64(user_id)
+            return self._b64_encode(user_id)
         return user_id
 
     def _itemid2url(self, item_id):
         """ base64 encode if needed """
         if self._database['item_id_type'].startswith('bytes'):
-            return self._b64(item_id)
+            return self._b64_encode(item_id)
         return item_id
 
-    def _b64(self, data):
+    def _userid2body(self, data):
+        return self._base_field_id(data, 'user', self._id2body)
+
+    def _itemid2body(self, data):
+        return self._base_field_id(data, 'item', self._id2body)
+
+    def _body2userid(self, data):
+        return self._base_field_id(data, 'user', self._body2id)
+
+    def _body2itemid(self, data):
+        return self._base_field_id(data, 'item', self._body2id)
+
+    def _base_field_id(self, data, field, cast_func):
+        if not self.b64_encode_bytes:
+            return
+        d_type = self._database[f'{field}_id_type']
+        if d_type.startswith(('bytes', 'uuid', 'hex', 'urlsafe')):
+            if isinstance(data, list):
+                if all(isinstance(d, dict) for d in data):
+                    for row in data:
+                        row[f'{field}_id'] = cast_func(row[f'{field}_id'], d_type)
+                else:
+                    data = [cast_func(row, d_type) for row in data]
+            else:
+                data = cast_func(data, d_type)
+        return data
+
+    def _id2body(self, data, d_type):
+        if d_type.startswith(('uuid', 'hex', 'urlsafe')):
+            return data.decode('ascii')
+        else:  # Bytes
+            return self._b64_encode(data)
+
+    def _body2id(self, data, d_type):
+        if d_type.startswith(('uuid', 'hex', 'urlsafe')):
+            return data.encode('ascii')
+        else:  # Bytes
+            return self._b64_decode(data.encode('ascii'))
+
+    def _b64_encode(self, data):
         return base64.urlsafe_b64encode(data).replace(b'=', b'').decode('ascii')
+
+    def _b64_decode(self, data):
+        n_pad = (4 - len(data) % 4) % 4
+        if n_pad <= 2:
+            data = data + b'=' * n_pad
+        elif n_pad == 3:
+            raise TypeError()  # TODO
+        try:
+            return base64.b64decode(data, b'-_')
+        except BinasciiError:
+            raise TypeError()
 
     def _get_latest_task_progress_message(self, task_name,
                                           default=None, default_running=None, default_failed=None):
