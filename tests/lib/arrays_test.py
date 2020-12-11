@@ -5,7 +5,7 @@ import numpy
 from xminds.lib.arrays import (kargmin, kargmax, to_structured,
                                set_or_add_to_structured, structured_arrays_mean,
                                set_or_reallocate, in1d, search, cumcount_by_value)
-from tests._lib.hashmap_test import UInt64HashmapTestCase,  UInt64StructHashmapTestCase, ObjectHashmapTestCase, _cat
+from tests._lib.hashmap_test import UInt64HashmapTestCase, UInt64StructHashmapTestCase, ObjectHashmapTestCase, _cat
 
 
 def test_set_or_reallocate():
@@ -18,9 +18,9 @@ def test_set_or_reallocate():
     array = set_or_reallocate(array, numpy.ones(8), 0, fill=0)  # 1 .. 1 0 .. 0
     assert array[-1] == 0
     # 2D
-    array = numpy.arange(3*2).reshape((3, 2))  # [[0 1][2 3][4 5]]
+    array = numpy.arange(3 * 2).reshape((3, 2))  # [[0 1][2 3][4 5]]
     array = set_or_reallocate(array, [[6, 7], [8, 9]], 3)
-    assert (array[:5, :] == numpy.arange(5*2).reshape((5, 2))).all()
+    assert (array[:5, :] == numpy.arange(5 * 2).reshape((5, 2))).all()
 
 
 class StructuredArrayTestCase(unittest.TestCase):
@@ -153,7 +153,7 @@ class StructuredArrayTestCase(unittest.TestCase):
             ('U64', '11'),
             ('S64', b'11'),
         ])
-        for k, t in [('int64_0', 'int64'),('int64_1', 'int64'), ('int64_2', 'int64'),
+        for k, t in [('int64_0', 'int64'), ('int64_1', 'int64'), ('int64_2', 'int64'),
                      ('float64', 'float64'), ('U64', '<U2'), ('S64', '|S2')]:
             assert array2[k].dtype == t
             assert int(array2[k][0]) == 11
@@ -319,10 +319,10 @@ class SearchTestCase(unittest.TestCase):
         assert (idx == numpy.arange(n)).all()
         assert in1d(vals, vals).all()
         # search half of itself within itself
-        idx, found = search(vals[:n//2], vals)
+        idx, found = search(vals[:n // 2], vals)
         assert found.all()
-        assert (idx == numpy.arange(n//2)).all()
-        assert in1d(vals[:n//2], vals).all()
+        assert (idx == numpy.arange(n // 2)).all()
+        assert in1d(vals[:n // 2], vals).all()
         # search duplicate of itself within itself
         dups = _cat(vals, vals)
         idx, found = search(dups, vals)

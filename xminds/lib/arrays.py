@@ -2,6 +2,8 @@
 Array tools
 ===========
 """
+import sys
+
 import numpy
 
 from xminds._lib.hashmap import Hashmap, factorize
@@ -214,6 +216,25 @@ def set_or_reallocate(array, values, offset, growing_factor=2., fill=None):
     # Sets new values
     new_array[offset:end] = values
     return new_array
+
+
+def lexsort_uint32_pair(a, b):
+    """
+    faster alternative to numpy.lexsort for two uint32
+
+    :param array a: (n,) uint32-array
+    :param array b: (n,) uint32-array
+    :returns: permutation array of n to sort by a first and b second
+    """
+    assert a.min() >= 0 and a.max() < (1<<32), (a.min(), a.max())
+    assert b.min() >= 0 and b.max() < (1<<32), (b.min(), b.max())
+    assert a.size == b.size
+    dtype = ([('b', 'u4'), ('a', 'u4')] if sys.byteorder == 'little'
+             else [('a', 'u4'), ('b', 'u4')])
+    combined = numpy.empty(a.size, dtype=dtype)
+    combined['a'] = a
+    combined['b'] = b
+    return numpy.argsort(combined.view('u8'))
 
 
 def kargmax(a, k, axis=0, do_sort=False):

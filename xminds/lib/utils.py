@@ -229,7 +229,7 @@ def getenv(name, default=None, cast=None):
 
 def is_true(value):
     """
-    Return ``True`` if the input value is '1', 'true' or 'yes' (case insensitive)
+    Return ``True`` if the input value is ``'1'``, ``'true'`` or ``'yes'`` (case insensitive)
 
     :param str value: value to be evaluated
     :returns: bool
@@ -244,7 +244,7 @@ def is_true(value):
 
 def is_false(value):
     """
-    Return ``True`` if the input value is '0', 'false' or 'no' (case insensitive)
+    Return ``True`` if the input value is ``'0'``, ``'false'`` or ``'no'`` (case insensitive)
 
     :param str value: value to be evaluated
     :returns: bool

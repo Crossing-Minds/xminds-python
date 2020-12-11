@@ -1,6 +1,7 @@
 import numpy
 
-from xminds.lib.iterable import (is_empty_iterable, get_first_of_iterable, ichunk_iterable)
+from xminds.lib.iterable import (is_empty_iterable,
+                                 get_first_of_iterable, ichunk_iterable)
 
 
 def _empty_generator_function():
