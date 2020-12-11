@@ -11,6 +11,7 @@ This module implements the low level request logic of Crossing Minds API:
 import json
 import logging
 import pickle
+import zlib
 
 import requests
 
@@ -135,6 +136,7 @@ class CrossingMindsApiPythonRequest(_BaseCrossingMindsApiRequest):
         'User-Agent': f'CrossingMinds/{__version__} (Python/{PYV}; pickle)',
         'Content-type': 'application/xminds-pkl',
         'Accept': 'application/xminds-pkl',
+        'Content-Encoding': 'gzip',
     }
     _REQUEST_KWARGS = {
         'stream': True,
@@ -142,7 +144,7 @@ class CrossingMindsApiPythonRequest(_BaseCrossingMindsApiRequest):
     PICKLE_PROTOCOL = 4
 
     def _serialize_data(self, data):
-        return pickle.dumps(data, protocol=self.PICKLE_PROTOCOL)
+        return zlib.compress(pickle.dumps(data, protocol=self.PICKLE_PROTOCOL))
 
     def _parse_response(self, response, fallback=False):
         if response.status_code == 204:
