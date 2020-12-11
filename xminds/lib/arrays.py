@@ -7,7 +7,7 @@ import sys
 import numpy
 
 from xminds._lib.hashmap import Hashmap, factorize
-from .arraybase import set_or_add_to_structured, to_structured
+from .arraybase import to_structured, set_or_add_to_structured
 
 
 def structured_arrays_mean(arrays, keep_missing=False):

@@ -190,3 +190,57 @@ def set_or_add_to_structured(array, data, copy=True):
             for name in a.dtype.names:
                 array[name] = a[name]
     return array
+
+
+def clean_dtype(dtype, sort=False):
+    """
+    Remove offsets from dtype, keeping only names and dtype.
+    (See `Numpy dtype documentation <https://numpy.org/doc/stable/reference/generated/numpy.dtype.html>`_.)
+
+    :param dtype-descr dtype: either a numpy.dtype, or a description of it
+    :param bool? sort: (default: False)
+    :returns: clean dtype, without offsets, sorted by field-names
+
+    Example
+    _______
+    >>> d = numpy.dtype({
+    >>>    'names': ['z_col', 'd_col', 'a_col'],
+    >>>    'formats': ['i4', 'f4','i4'],
+    >>>    'offsets': [0, 4, 40]
+    >>> })
+    >>> d
+    dtype({'names':['z_col','d_col','a_col'], 'formats':['<i4','<f4','<i4'], 'offsets':[0,4,40], 'itemsize':44})
+    >>> clean_dtype(d)
+    [('a_col', dtype('int32')),
+    ('d_col', dtype('float32')),
+    ('z_col', dtype('int32'))]
+    """
+    dtype = numpy.dtype(dtype)
+    if not getattr(dtype, 'names', None):
+        return dtype
+    dtype = ((field, dtype) for field, (dtype, _) in dtype.fields.items())
+    if sort:
+        dtype = sorted(dtype)
+    return numpy.dtype(dtype)
+
+
+def remove_structured_offset(array):
+    """
+    Remove offset fields from structured array.
+    Does not copy the data if the dtype does not have offsets.
+
+    :param array array: structured array
+    :returns: structured array without offsets
+
+    Example
+    _______
+    >>> a = numpy.array([(1, 2, 3), (4, 5, 6)], [('a', 'i4'), ('b', 'i4'), ('c', 'i4')])
+    >>> b = a[['c', 'a']]
+    >>> b.dtype
+    dtype({'names':['c','a'], 'formats':['<i4','<i4'], 'offsets':[8,0], 'itemsize':12})
+    >>> b = remove_structured_offset(b)
+    >>> b.dtype
+    dtype([('c', '<i4'), ('a', '<i4')])
+    """
+    cleaned_dtype = clean_dtype(array.dtype, sort=False)
+    return array.astype(cleaned_dtype)

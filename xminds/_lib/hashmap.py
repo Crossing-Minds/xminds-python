@@ -4,6 +4,15 @@ import warnings
 from .compat import structured_cast
 # from .logger import logger
 from ..lib.arraybase import set_or_add_to_structured, to_structured
+from ..lib.iterable import split
+
+try:
+    import xxhash
+    _HAS_XXHASH = True
+except ImportError:
+    _HAS_XXHASH = False
+    import hashlib
+    import struct
 
 # Pure numpy implementation of hashmaps
 # This file implements low level classes, but as a user you should try to use:
@@ -21,11 +30,11 @@ class _BaseHashmap(object):
 
     * hashmaps gives efficient O(n) search in un-sorted set of keys or map keys => values
     * hashmaps without values are called hashtables
-    * only relies on numpy array, so can be moved to shared memory
     * this implementation relies on Fibonacci hashing
-    * we support any dtype for the keys and values, by implementing three sub-classes:
+    * we support any dtype for the keys and values, by implementing these sub-classes:
     * - vanilla hash for uint64 keys
     * - python's tuple-hash for struct of uint64 fields
+    * - xxhash or sha1 for bytes objects (or encoded str objects), or struct of them
     * - python's object hash for any object
     * for the first two, the keys are casted into uint64 or uint64-tuple
     * when possible for struct of a few tiny field, we view them as a single uint64
@@ -41,8 +50,8 @@ class _BaseHashmap(object):
         :param int? empty: empty value (default: 0)
         """
         original_dtype = keys.dtype
-        cast_dtype = cast_dtype or keys.dtype
-        view_dtype = view_dtype or keys.dtype
+        cast_dtype = numpy.dtype(cast_dtype or keys.dtype)
+        view_dtype = numpy.dtype(view_dtype or keys.dtype)
         _keys = cls._cast(keys, cast_dtype, view_dtype)
         # keys = structured_cast(keys, dtype)
         empty = cls._choose_empty_value(_keys, view_dtype, empty)
@@ -68,17 +77,6 @@ class _BaseHashmap(object):
         self.n_used = (self._table != self._empty).sum()
         self.original_dtype = original_dtype
         self.cast_dtype = cast_dtype
-
-    def get_sharable_arrays(self):
-        return {
-            'table': self._table,
-            'values': self.values,
-        }
-
-    def copy_with_shared_arrays(self, table, values):
-        cls = type(self)
-        return cls(table, values, self._empty, self.log_size, self.original_dtype, self.cast_dtype,
-                   can_resize=False)
 
     @property
     def size(self):
@@ -127,12 +125,12 @@ class _BaseHashmap(object):
                 values = values[collisions]
             indexes = self._shifted_hash(_keys, step)
         if not done:
-            raise RuntimeError(
-                'could not set_many within {} steps'.format(max_steps))
+            raise RuntimeError(f'could not set_many within {max_steps} steps')
         self.n_used = (self._table != self._empty).sum()
 
-    def search(self, keys):
+    def lookup(self, keys):
         """
+        Search keys in hashtable (do not confuse with ``get_many`` of hashmap)
         :param array keys: (n,) key-dtype array
         :returns: tuple(
             indexes: (n,) uint64 array,
@@ -172,8 +170,7 @@ class _BaseHashmap(object):
             found = table_values != self._empty
             all_found[idx_in_all] = found
         if not done:
-            raise RuntimeError(
-                'could not search within {} steps'.format(max_steps))
+            raise RuntimeError(f'could not lookup within {max_steps} steps')
         return all_indexes, all_found
 
     def contains(self, keys):
@@ -181,7 +178,7 @@ class _BaseHashmap(object):
         :param array keys: (n,) key-dtype array
         :returns: (n,) bool array
         """
-        _, found = self.search(keys)
+        _, found = self.lookup(keys)
         return found
 
     def get_many(self, keys):
@@ -194,8 +191,8 @@ class _BaseHashmap(object):
         """
         if self.values is None:
             raise ValueError(
-                '`get_many` is only available when values is not None, use `search`')
-        indexes, found = self.search(keys)
+                '`get_many` is only available when values is not None, use `lookup`')
+        indexes, found = self.lookup(keys)
         values = self.values[indexes]
         return values, found
 
@@ -292,8 +289,7 @@ class _BaseHashmap(object):
             if values is not None:
                 self.values[available_indexes] = values[available]
         if not done:
-            raise RuntimeError(
-                'could not _set_initial within {} steps'.format(max_steps))
+            raise RuntimeError(f'could not _set_initial within {max_steps} steps')
         self.n_used = (self._table != self._empty).sum()
 
     def _change_empty(self, new_keys):
@@ -333,12 +329,22 @@ class _BaseHashmap(object):
         if keys.dtype != cast_dtype:
             keys = structured_cast(keys, cast_dtype)
         if keys.dtype != view_dtype:
-            keys = keys.view(view_dtype)
+            if not keys.dtype.hasobject and not view_dtype.hasobject:
+                keys = keys.view(view_dtype)
+            else:
+                # HACK! numpy doesn't allow views with object, so we use a workaround
+                # warning: SegFault if `keys.dtype` has offsets, but we clean in structured_cast
+                keys = numpy.ndarray(keys.shape, view_dtype, keys.data)
         return keys
 
     def _cast_back(self, keys):
         if keys.dtype != self.cast_dtype:
-            keys = keys.view(self.cast_dtype)
+            if not keys.dtype.hasobject and not self.cast_dtype.hasobject:
+                keys = keys.view(self.cast_dtype)
+            else:
+                # HACK! numpy doesn't allow views with object, so we use a workaround
+                # warning: SegFault if `keys.dtype` has offsets, but we clean in structured_cast
+                keys = numpy.ndarray(keys.shape, self.cast_dtype, keys.data)
         if keys.dtype != self.original_dtype:
             keys = structured_cast(keys, self.original_dtype)
         return keys
@@ -361,7 +367,7 @@ class UInt64Hashmap(_BaseHashmap):
         """
         cast_dtype = cast_dtype or UINT64
         view_dtype = view_dtype or UINT64
-        return super(UInt64Hashmap, cls).new(keys, values, cast_dtype, view_dtype, empty)
+        return super().new(keys, values, cast_dtype, view_dtype, empty)
 
     @classmethod
     def _hash(cls, _keys, step):
@@ -390,7 +396,8 @@ class UInt64Hashmap(_BaseHashmap):
 class UInt64StructHashmap(_BaseHashmap):
     """
     a mapping from uint64-struct to arbitrary values in a numpy array
-    consider using the higher-level `Hashmap` instead
+    can be used on any structured dtypes without ``'O'`` by using views
+    consider using the higher-level ``Hashmap`` instead
     """
     # almost INV_PHI but different one (used in xxhash.c)
     _PRIME_1 = UINT64(11400714785074694791)
@@ -406,13 +413,11 @@ class UInt64StructHashmap(_BaseHashmap):
         :param dtype? view_dtype: dtype to view ``keys`` (default: uint64 for each field)
         :param object? empty: empty value (default: row of 0)
         """
-        cast_dtype = cast_dtype or [
-            (name, 'uint64') for name in keys.dtype.names
-        ]
-        view_dtype = view_dtype or [
-            (name, 'uint64') for name in keys.dtype.names
-        ]
-        return super(UInt64StructHashmap, cls).new(keys, values, cast_dtype, view_dtype, empty)
+        cast_dtype = cast_dtype or [(name, 'uint64')
+                                    for name in keys.dtype.names]
+        view_dtype = view_dtype or [(name, 'uint64')
+                                    for name in keys.dtype.names]
+        return super().new(keys, values, cast_dtype, view_dtype, empty)
 
     @classmethod
     def _hash(cls, _keys, step):
@@ -461,6 +466,7 @@ class UInt64StructHashmap(_BaseHashmap):
 class ObjectHashmap(_BaseHashmap):
     """
     a mapping from arbitrary keys to arbitrary values in a numpy array
+    internally uses python ``hash``, so hashes are not consistent (not even for string or bytes)
     consider using the higher-level ``Hashmap`` instead
     """
 
@@ -475,7 +481,7 @@ class ObjectHashmap(_BaseHashmap):
         """
         cast_dtype = cast_dtype or keys.dtype
         view_dtype = view_dtype or cast_dtype
-        return super(ObjectHashmap, cls).new(keys, values, cast_dtype, view_dtype, empty)
+        return super().new(keys, values, cast_dtype, view_dtype, empty)
 
     @classmethod
     def _hash(cls, _keys, step):
@@ -504,6 +510,52 @@ class ObjectHashmap(_BaseHashmap):
         return UInt64StructHashmap._choose_empty_value(_keys, dtype, empty)
 
 
+class BytesObjectHashmap(ObjectHashmap):
+    """
+    hashmap from bytes strings keys encoded as object
+    internally uses xxhash or hashlib to get consistent hashes
+    consider using the higher-level ``Hashmap`` instead
+    """
+
+    if _HAS_XXHASH:
+        @classmethod
+        def _hash_single_obj(cls, obj):
+            return xxhash.xxh3_64_intdigest(obj)
+    else:
+        @classmethod
+        def _hash_single_obj(cls, obj):
+            sha1 = hashlib.sha1()
+            sha1.update(obj)
+            return struct.unpack('<Q', sha1.digest()[:8])[0]
+
+
+class StrObjectHashmap(BytesObjectHashmap):
+    """
+    hashmap from unicode strings keys encoded as object
+    internally uses xxhash or hashlib to get consistent hashes
+    consider using the higher-level ``Hashmap`` instead
+    """
+    @classmethod
+    def _hash_single_obj(cls, obj):
+        return super()._hash_single_obj(obj.encode(errors='ignore'))
+
+
+class BytesObjectTupleHashmap(BytesObjectHashmap):
+    """
+    hashmap from tuple of either non-object, or bytes/unicode strings keys encoded as object
+    internally uses xxhash or hashlib to get consistent hashes
+    consider using the higher-level ``Hashmap`` instead
+    """
+    @classmethod
+    def _hash_single_obj(cls, obj_tuple):
+        h = xxhash.xxh3_64() if _HAS_XXHASH else hashlib.sha1()
+        for obj in obj_tuple:
+            if isinstance(obj, str):
+                obj = obj.encode(errors='ignore')
+            h.update(obj)
+        return struct.unpack('<Q', h.digest()[:8])[0]
+
+
 def Hashmap(keys, values=None):
     """
     fake class to select between uint64/struct/object from dtype of arguments
@@ -511,57 +563,82 @@ def Hashmap(keys, values=None):
     :param array? values: (n,) val-dtype array
     """
     # switch type from keys
-    cls, cast_dtype, view_dtype = _get_optimal_cast(keys.dtype)
+    cls, cast_dtype, view_dtype = _get_optimal_cast(keys)
     # build hashmap
     return cls.new(keys, values, cast_dtype, view_dtype)
 
 
-def _get_optimal_cast(dtype):
+def _get_optimal_cast(keys, allow_object_hashmap=False):
     """
     select best hashmap type to fit ``dtype``
+
+    :param array keys:
+    :param bool? allow_object_hashmap:
     :returns: cls, cast_dtype, view_dtype
     """
+    dtype = keys.dtype
     kind = dtype.kind
     names = dtype.names
     # scalar input (or strings of less than 8 bytes) we can view as uint64
-    if kind in 'buifcSU' and dtype.itemsize <= 8:
+    if kind in 'buifcSUV' and dtype.itemsize <= 8 and not names:
         if kind == 'b':
             kind = 'u'
-        return UInt64Hashmap, '{}8'.format(kind), UINT64
+        # how many units of `kind` we need for get 8 bytes, e.g. 2 for 'U'
+        inner_dtype_len = 8 // numpy.dtype(f'{kind}1').itemsize
+        cast_dtype = f'{kind}{inner_dtype_len}'
+        view_dtype = UINT64
+        return UInt64Hashmap, numpy.dtype(cast_dtype), numpy.dtype(view_dtype)
     # cast string of more than 8 bytes to tuple of uint64
-    elif kind in 'SU':
+    elif kind in 'SUV' and not names:
         # number of uint64 (8 bytes) we need to view original dtype, e.g. 5 for 'U9'
         n_uint64 = int(numpy.ceil(float(dtype.itemsize) / 8))
         # how many 'S1' or 'U1' we need for get 8 bytes, e.g. 2 for 'U'
-        inner_dtype_len = 8 / numpy.dtype('{}1'.format(kind)).itemsize
+        inner_dtype_len = 8 / numpy.dtype(f'{kind}1').itemsize
         # first cast to bigger string to fit exactly a multiple of 8 bytes, e.g. 'U10'
-        cast_dtype = '{}{}'.format(kind, int(n_uint64 * inner_dtype_len))
+        cast_dtype = f'{kind}{int(n_uint64 * inner_dtype_len)}'
         # then view as a tuple of uint64, e.g. 'u8,u8,u8,u8,u8'
-        view_dtype = [('f{}'.format(i), 'u8') for i in range(n_uint64)]
-        return UInt64StructHashmap, cast_dtype, view_dtype
+        view_dtype = [(f'f{i}', 'u8') for i in range(n_uint64)]
+        return UInt64StructHashmap, numpy.dtype(cast_dtype), numpy.dtype(view_dtype)
     # struct input
-    if names and all(dtype[n].kind in 'buifcSU' for n in names):
-        # if all fields fit inside 8 bytes, use uint64 hashmap
+    if names and all(dtype[n].kind in 'buifcSUV' for n in names):
         dtypes = [(n, dtype[n]) for n in names]
+        # check if we need padding to fit in a multiple of 8 bytes
         sizes = [(n, dt.itemsize) for n, dt in dtypes]
         nbytes = sum(dt for _, dt in sizes)
+        npad = 8 * int(numpy.ceil(nbytes / 8)) - nbytes
+        if npad == 0:
+            cast_dtype = dtypes  # simply remove offsets
+        else:
+            # add 'S{npad}' padding field
+            cast_dtype = dtypes + [('__pad__', f'S{npad}')]
+        # if all fields fit inside 8 bytes, use uint64 hashmap
         if nbytes <= 8:
-            npad = 8 - nbytes
-            if npad == 0:
-                cast_dtype = dtypes  # simply remove offsets
-            else:
-                # add 'S{npad}' padding field
-                cast_dtype = dtypes + [('__pad__', 'S{}'.format(npad))]
-            return UInt64Hashmap, cast_dtype, UINT64
-        # otherwise if all fields have less than 8B, use the uint64 struct implementation
-        if all(sz <= 8 for _, sz in sizes):
-            # TO-OPTIMIZE: pack many fields into uint64 to reduce the number of fields
-            cast_dtype = [(n, '{}8'.format(dt.kind if dt.kind != 'b' else 'u'))
-                          for n, dt in dtypes]
-            view_dtype = [(n, 'u8') for n in names]
-            return UInt64StructHashmap, cast_dtype, view_dtype
-    # otherwise, use object
-    return ObjectHashmap, dtype, dtype
+            view_dtype = UINT64
+            return UInt64Hashmap, numpy.dtype(cast_dtype), numpy.dtype(view_dtype)
+        # otherwise view as a struct of multiple uint64
+        n_uint64 = int(numpy.ceil(float(dtype.itemsize) / 8))
+        view_dtype = [(f'f{i}', 'u8') for i in range(n_uint64)]
+        return UInt64StructHashmap, numpy.dtype(cast_dtype), numpy.dtype(view_dtype)
+    # bytes/str objects
+    if kind == 'O':
+        if all(isinstance(k, bytes) for k in keys):
+            return BytesObjectHashmap, numpy.dtype('O'), numpy.dtype('O')
+        if all(isinstance(k, str) for k in keys):
+            return StrObjectHashmap, numpy.dtype('O'), numpy.dtype('O')
+    # struct with bytes/str objects
+    if names and all(dtype[n].kind in 'buifcSUVO' for n in names):
+        dtypes = [(n, dtype[n]) for n in names]
+        obj_dtypes, nonobj_dtypes = split(dtypes, lambda ndt: ndt[1] == 'O')
+        if all(isinstance(k, (str, bytes)) for n, _ in obj_dtypes for k in keys[n]):
+            # view all non-object as a single byte string
+            cast_dtype = nonobj_dtypes + obj_dtypes  # move all non-obj first
+            nonobj_size = sum(dt.itemsize for _, dt in nonobj_dtypes)
+            view_dtype = [('__nonobj__', f'V{nonobj_size}')] + obj_dtypes
+            return BytesObjectTupleHashmap, numpy.dtype(cast_dtype), numpy.dtype(view_dtype)
+    # use arbitrary object but it is dangerous, so we raise if not explicitely allowed
+    if allow_object_hashmap:
+        return ObjectHashmap, dtype, dtype
+    raise NotImplementedError(dtype)
 
 
 def unique(values, return_inverse=False, return_index=False):
@@ -715,6 +792,6 @@ def values_hash(array, step=0):
     :param uint64 step: optional step number to modify hash values
     :returns: (n,) uint64 array
     """
-    cls, cast_dtype, view_dtype = _get_optimal_cast(array.dtype)
+    cls, cast_dtype, view_dtype = _get_optimal_cast(array)
     array = cls._cast(array, cast_dtype, view_dtype)
     return cls._hash(array, UINT64(step))

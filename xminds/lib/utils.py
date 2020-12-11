@@ -17,33 +17,7 @@ try:
 except ImportError:
     HAS_SCIPY = False
 
-
-def clean_dtype(dtype):
-    """
-    Remove offsets, keeping only names and dtype.
-    (See `Numpy dtype documentation <https://numpy.org/doc/stable/reference/generated/numpy.dtype.html>`_.)
-
-    :param dtype-descr dtype: either a numpy.dtype, or a description of it
-    :returns: clean dtype, without offsets, sorted by field-names
-
-    Example
-    _______
-    >>> d = numpy.dtype({
-    >>>    'names': ['z_col', 'd_col', 'a_col'],
-    >>>    'formats': ['i4', 'f4','i4'],
-    >>>    'offsets': [0, 4, 40]
-    >>> })
-    >>> d
-    dtype({'names':['z_col','d_col','a_col'], 'formats':['<i4','<f4','<i4'], 'offsets':[0,4,40], 'itemsize':44})
-    >>> clean_dtype(d)
-    [('a_col', dtype('int32')),
-    ('d_col', dtype('float32')),
-    ('z_col', dtype('int32'))]
-    """
-    dtype = numpy.dtype(dtype)
-    if not getattr(dtype, 'names', None):
-        return dtype
-    return numpy.dtype(sorted((field, dtype) for field, (dtype, _) in dtype.fields.items()))
+from .arraybase import clean_dtype
 
 
 def deep_hash(value, prefix=None, fmt=None):
@@ -131,7 +105,7 @@ def _deep_hash_update(h, value):
             _deep_hash_update(h, v)
     elif isinstance(value, numpy.ndarray):
         if value.dtype.names:
-            h.update(value.astype(clean_dtype(value.dtype)))
+            h.update(value.astype(clean_dtype(value.dtype, sort=True)))
         else:
             h.update(numpy.ascontiguousarray(value))
     elif HAS_SCIPY and isinstance(value, (csr_matrix, csc_matrix)):

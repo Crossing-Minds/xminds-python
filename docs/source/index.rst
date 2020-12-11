@@ -2,7 +2,7 @@ xminds
 ======
 
 Crossing Minds Data Science Python Library and API client.
- 
+
 Our tools are licensed under the :ref:`MIT License <license_ref>`.
 
 
@@ -14,6 +14,7 @@ Contents
    :recursive:
 
    xminds.api
+   xminds.ds
    xminds.lib
 
 

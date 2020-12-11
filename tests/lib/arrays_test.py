@@ -2,10 +2,14 @@ import unittest
 
 import numpy
 
-from xminds.lib.arrays import (kargmin, kargmax, to_structured,
-                               set_or_add_to_structured, structured_arrays_mean,
-                               set_or_reallocate, in1d, search, cumcount_by_value)
-from tests._lib.hashmap_test import UInt64HashmapTestCase, UInt64StructHashmapTestCase, ObjectHashmapTestCase, _cat
+from xminds.lib.arrays import (
+    kargmin, kargmax, to_structured, set_or_add_to_structured, structured_arrays_mean,
+    set_or_reallocate, in1d, search, cumcount_by_value)
+from tests._lib.hashmap_test import (
+    BytesHashtableTestCase, BytesObjectHashtableTestCase,
+    StrHashtableTestCase, StrObjectHashtableTestCase,
+    UInt64HashtableTestCase,  UInt64StructHashtableTestCase,
+    _cat)
 
 
 def test_set_or_reallocate():
@@ -267,47 +271,62 @@ class SearchTestCase(unittest.TestCase):
     """ test that `search` automatically adapts to and cast its arguments """
 
     def test_search_on_uint64(self):
-        vals = UInt64HashmapTestCase.get_keys()
-        vals2 = UInt64HashmapTestCase.get_keys()
+        vals = UInt64HashtableTestCase.get_keys()
+        vals2 = UInt64HashtableTestCase.get_keys()
         self._test_search(vals, vals2)
 
     def test_search_on_uint32(self):
-        vals = UInt64HashmapTestCase.get_keys().astype('uint32')
-        vals2 = UInt64HashmapTestCase.get_keys().astype('uint32')
+        vals = UInt64HashtableTestCase.get_keys().astype('uint32')
+        vals2 = UInt64HashtableTestCase.get_keys().astype('uint32')
         self._test_search(vals, vals2)
 
     def test_search_on_int64(self):
-        vals = UInt64HashmapTestCase.get_keys().astype('int64')
-        vals2 = UInt64HashmapTestCase.get_keys().astype('int64')
+        vals = UInt64HashtableTestCase.get_keys().astype('int64')
+        vals2 = UInt64HashtableTestCase.get_keys().astype('int64')
         self._test_search(vals, vals2)
 
     def test_search_on_int32(self):
-        vals = UInt64HashmapTestCase.get_keys().astype('int32')
-        vals2 = UInt64HashmapTestCase.get_keys().astype('int32')
+        vals = UInt64HashtableTestCase.get_keys().astype('int32')
+        vals2 = UInt64HashtableTestCase.get_keys().astype('int32')
         self._test_search(vals, vals2)
 
     def test_search_on_uint64_struct(self):
-        vals = UInt64StructHashmapTestCase.get_keys()
-        vals2 = UInt64StructHashmapTestCase.get_keys()
+        vals = UInt64StructHashtableTestCase.get_keys()
+        vals2 = UInt64StructHashtableTestCase.get_keys()
         self._test_search(vals, vals2)
 
     def test_search_on_mix_int_struct(self):
         dtype = [('a', 'uint8'), ('b', 'int64'),
                  ('c', 'uint64'), ('d', 'int8')]
-        vals = UInt64StructHashmapTestCase.get_keys(dtype=dtype)
-        vals2 = UInt64StructHashmapTestCase.get_keys(dtype=dtype)
+        vals = UInt64StructHashtableTestCase.get_keys(dtype=dtype)
+        vals2 = UInt64StructHashtableTestCase.get_keys(dtype=dtype)
         self._test_search(vals, vals2)
 
     def test_search_on_mix_tiny_types_struct(self):
         n = 64  # only a few items since duplicates are more likely
         dtype = [('a', 'uint8'), ('b', 'int8'), ('c', 'int8')]
-        vals = UInt64StructHashmapTestCase.get_keys(dtype=dtype, n=n)
-        vals2 = UInt64StructHashmapTestCase.get_keys(dtype=dtype, n=n)
+        vals = UInt64StructHashtableTestCase.get_keys(dtype=dtype, n=n)
+        vals2 = UInt64StructHashtableTestCase.get_keys(dtype=dtype, n=n)
         self._test_search(vals, vals2)
 
-    def test_search_on_object(self):
-        vals = ObjectHashmapTestCase.get_keys()
-        vals2 = ObjectHashmapTestCase.get_keys()
+    def test_search_on_bytes(self):
+        vals = BytesHashtableTestCase.get_keys()
+        vals2 = BytesHashtableTestCase.get_keys()
+        self._test_search(vals, vals2)
+
+    def test_search_on_str(self):
+        vals = StrHashtableTestCase.get_keys()
+        vals2 = StrHashtableTestCase.get_keys()
+        self._test_search(vals, vals2)
+
+    def test_search_on_bytes_object(self):
+        vals = BytesObjectHashtableTestCase.get_keys()
+        vals2 = BytesObjectHashtableTestCase.get_keys()
+        self._test_search(vals, vals2)
+
+    def test_search_on_str_object(self):
+        vals = StrObjectHashtableTestCase.get_keys()
+        vals2 = StrObjectHashtableTestCase.get_keys()
         self._test_search(vals, vals2)
 
     @classmethod

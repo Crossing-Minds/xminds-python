@@ -9,13 +9,13 @@ def linearscaling(x, new_min, new_max, old_min=None, old_max=None, axis=None):
     """
     Linearly rescale input from its original range to a new range.
 
-    :param scalar-or-array x:  scalar or arrays of scalars in ``[old_min, old_max]`` of shape (n, *shape)
-    :param scalar-or-array new_min: scalar or array of shape (*shape,)
-    :param scalar-or-array new_max: scalar or array of shape (*shape,)
+    :param scalar-or-array x:  scalar or arrays of scalars in ``[old_min, old_max]`` of shape ``(n, *shape)``
+    :param scalar-or-array new_min: scalar or array of shape ``(*shape,)``
+    :param scalar-or-array new_max: scalar or array of shape ``(*shape,)``
     :param scalar-or-array? old_min: (``default=x.min()``)
     :param scalar-or-array? old_max: (``default=x.max()``)
     :param int? axis: (``default=None``)
-    :return: scalar or array of scalars in ``[new_min, new_max]`` of shape (n, *shape)
+    :return: scalar or array of scalars in ``[new_min, new_max]`` of shape ``(n, *shape)``
 
     Example
     _______
