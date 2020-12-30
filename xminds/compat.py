@@ -13,10 +13,10 @@ except ImportError:
 
 
 try:
-    # if dev has coloredlogs installed, let's use it
+    # if coloredlogs is installed and no logging handler is defined yet, configure it
     import coloredlogs
-    coloredlogs.install(
-        level='DEBUG', fmt='%(asctime)s %(message)s', datefmt='%H:%M:%S')
+    if not logging.root.handlers:
+        coloredlogs.install(fmt='%(asctime)s %(message)s', datefmt='%H:%M:%S')
 except ImportError:
     logging.basicConfig()
 logger = logging.getLogger()
