@@ -1076,12 +1076,13 @@ class CrossingMindsApiClient:
     # === Scheduled Background Tasks ===
 
     @require_login
-    def trigger_background_task(self, task_name):
+    def trigger_background_task(self, task_name, payload=None):
         """
         Trigger background task such as retraining of ML models.
         You should not have to call this endpoint yourself, as this is done automatically.
 
         :param str task_name: for instance ``'ml_model_retrain'``
+        :param dict? payload: optional task payload
         :returns: {
             'task_id': str,
         }
@@ -1089,7 +1090,10 @@ class CrossingMindsApiClient:
             if this task is already running
         """
         path = f'tasks/{self.escape_url(task_name)}/'
-        return self.api.post(path=path, data={})
+        data = {}
+        if payload:
+            data['payload'] = payload
+        return self.api.post(path=path, data=data)
 
     @require_login
     def get_background_tasks(self, task_name):
