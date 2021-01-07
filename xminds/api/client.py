@@ -1052,6 +1052,51 @@ class CrossingMindsApiClient:
         path = f'users/{user_id}/ratings/'
         return self.api.delete(path=path)
 
+    # === User Interactions ===
+
+    @require_login
+    def create_interaction(self, user_id, item_id, interaction_type, timestamp=None):
+        """
+        This endpoint allows you to create a new interaction for a user and an item.
+        An inferred rating will be created or updated for the tuple (user_id, item_id).
+        The taste profile of the user will then be updated in real-time by the online machine learning algorithm.
+
+        :param ID user_id: user ID
+        :param ID item_id: item ID
+        :param str interaction_type: Interaction type
+        :param float? timestamp: rating timestamp (default: now)
+        """
+        user_id = self._userid2url(user_id)
+        item_id = self._itemid2url(item_id)
+        path = f'users/{user_id}/interactions/{item_id}/'
+        data = {
+            'interaction_type': interaction_type,
+        }
+        if timestamp is not None:
+            data['timestamp'] = timestamp
+        return self.api.post(path=path, data=data)
+
+    @require_login
+    def create_interactions_bulk(self, interactions, chunk_size=(1<<14)):
+        """
+        Create or update large bulks of interactions for many users and many items.
+        Inferred ratings will be created or updated for all tuples (user_id, item_id).
+
+        :param array interactions: interactions array with fields:
+            ['user_id': ID, 'item_id': ID, 'interaction_type': str, 'timestamp': float]
+        :param int? chunk_size: split the requests in chunks of this size (default: 16K)
+        """
+        path = f'interactions-bulk/'
+        n_chunks = int(numpy.ceil(len(interactions) / chunk_size))
+        for i in tqdm(range(n_chunks), disable=(True if n_chunks < 4 else None)):
+            interactions_chunk = interactions[i*chunk_size:(i+1)*chunk_size]
+            interactions_chunk = self._userid2body(self._itemid2body(interactions_chunk))
+            data = {
+                'interactions': interactions_chunk,
+            }
+            self.api.post(path=path, data=data, timeout=10)
+        return
+
     # === Data Dump Storage ===
 
     @require_login
