@@ -603,8 +603,7 @@ def _get_optimal_cast(keys, allow_object_hashmap=False):
     if names and all(dtype[n].kind in 'buifcSUV' for n in names):
         dtypes = [(n, dtype[n]) for n in names]
         # check if we need padding to fit in a multiple of 8 bytes
-        sizes = [(n, dt.itemsize) for n, dt in dtypes]
-        nbytes = sum(dt for _, dt in sizes)
+        nbytes = sum(dt.itemsize for n, dt in dtypes)
         npad = 8 * int(numpy.ceil(nbytes / 8)) - nbytes
         if npad == 0:
             cast_dtype = dtypes  # simply remove offsets
@@ -616,7 +615,7 @@ def _get_optimal_cast(keys, allow_object_hashmap=False):
             view_dtype = UINT64
             return UInt64Hashmap, numpy.dtype(cast_dtype), numpy.dtype(view_dtype)
         # otherwise view as a struct of multiple uint64
-        n_uint64 = int(numpy.ceil(float(dtype.itemsize) / 8))
+        n_uint64 = (nbytes + npad) // 8
         view_dtype = [(f'f{i}', 'u8') for i in range(n_uint64)]
         return UInt64StructHashmap, numpy.dtype(cast_dtype), numpy.dtype(view_dtype)
     # bytes/str objects

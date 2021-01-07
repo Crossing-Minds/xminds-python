@@ -8,7 +8,7 @@ import numpy
 
 from xminds.lib.arrays import to_structured, unique_count
 from xminds._lib.hashmap import (
-    BytesObjectHashmap, BytesObjectTupleHashmap, UInt64Hashmap, StrObjectHashmap,
+    BytesObjectHashmap, BytesObjectTupleHashmap, UInt64Hashmap, StrObjectHashmap, Hashmap,
     UInt64StructHashmap, array_hash, empty_hashmap, get_dense_labels_map, reverse_values2labels,
     unique, update_dense_labels_map, values_hash)
 
@@ -103,7 +103,7 @@ class UInt64HashtableTestCase(BaseHashtableTestCase, unittest.TestCase):
     @classmethod
     def get_keys(cls, n=None):
         n = n or 1<<10
-        return numpy.random.randint(1, 1<<63, size=n).astype('uint64')
+        return numpy.random.randint(1, 1 << 63, size=n).astype('uint64')
 
     # ...all test inherited from BaseHashtableTestCase...
 
@@ -212,6 +212,23 @@ class UInt64StructHashtableTestCase(BaseHashtableTestCase, unittest.TestCase):
         ht = self.new(keys2)
         indexes, found = ht.lookup(keys2)
         assert found.all()
+
+
+class StructWithOffsetsHashtableTestCase(BaseHashtableTestCase, unittest.TestCase):
+
+    @classmethod
+    def new(cls, keys):
+        return Hashmap(keys)
+
+    @classmethod
+    def get_keys(cls, n=None):
+        n = n or 1<<10
+        dtype = [('a', 'uint64'), ('b', 'uint64'), ('c', 'uint64')]
+        # shuffle order of fields in dtype to assert implementation re-orders
+        random.shuffle(dtype)
+        keys = numpy.empty(n, dtype=dtype)
+        keys[:] = [tuple(t) for t in numpy.random.randint(1, 1 << 63, size=(n, len(dtype)))]
+        return keys[['a', 'c']]
 
 
 class StringTupleHashtableTestCase(BaseHashtableTestCase, unittest.TestCase):
@@ -433,7 +450,7 @@ class BaseHashmapTestCaseMixin(object):
         n = n or 1<<10
         keys = numpy.empty(n, dtype=cls.val_dtype)
         keys[:] = [tuple(t) for t in numpy.random.randint(
-            1, 1<<63, size=(n, len(cls.val_dtype)))]
+            1, 1 << 63, size=(n, len(cls.val_dtype)))]
         return keys
 
     def test_get_many(self):
