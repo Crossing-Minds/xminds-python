@@ -51,10 +51,13 @@ def linearscaling(x, new_min, new_max, old_min=None, old_max=None, axis=None):
        [ 0.5, 50. ]])
     """
     if not isinstance(x, numpy.ndarray):
+        # meant for scalars
         assert old_min is not None
         assert old_max is not None
         assert old_min <= x <= old_max
     else:
+        if x.size == 0:
+            return x
         # set default old to current
         if old_min is None:
             old_min = x.min(axis=axis)
@@ -64,5 +67,12 @@ def linearscaling(x, new_min, new_max, old_min=None, old_max=None, axis=None):
             old_min = numpy.expand_dims(old_min, axis)
         if axis is not None:
             old_max = numpy.expand_dims(old_max, axis)
-        assert ((old_min <= x) & (x <= old_max)).all(), (x.min(), x.max())
-    return new_min + (x - old_min) * (new_max - new_min) / (old_max - old_min + 1e-32)
+        tol = abs(x.max()) * 1e-06  # for float32 precision
+        assert (old_min - tol <= x).all(axis=None) & (x <= old_max + tol).all(axis=None), (
+            x.min(), x.max(), old_max, old_min)
+    # clipping because we allow a tolerance in the previous assert
+    return numpy.clip(
+        new_min + (x - old_min) * (new_max - new_min) / (old_max - old_min + 1e-32),
+        a_min=numpy.minimum(new_min, new_max),  # we support new_max < new_min, for inversions
+        a_max=numpy.maximum(new_max, new_min)
+    )
