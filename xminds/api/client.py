@@ -578,16 +578,71 @@ class CrossingMindsApiClient:
             }
         :param int? chunk_size: split the requests in chunks of this size (default: 1K)
         """
+        path = f'users-bulk/'
+        for users_chunk, users_m2m_chunk in self._chunk_users(users, users_m2m, chunk_size):
+            data = {
+                'users': users_chunk,
+                'users_m2m': users_m2m_chunk
+            }
+            self.api.put(path=path, data=data, timeout=60)
+
+    @require_login
+    def partial_update_user(self, user, create_if_missing=None):
+        """
+        Partially update some properties of an user
+
+        :param dict user: user ID and properties {'user_id': ID, *<property_name: property_value>}
+        :param bool? create_if_missing: control whether an error should be returned or a new user
+        should be created when the ``user_id`` does not already exist. (default: False)
+        """
+        user = dict(user)
+        user_id = self._userid2url(user.pop('user_id'))
+        path = f'users/{user_id}/'
+        data = {
+            'user': user,
+        }
+        if create_if_missing is not None:
+            data['create_if_missing'] = create_if_missing
+        return self.api.patch(path=path, data=data)
+
+    @require_login
+    def partial_update_users_bulk(self, users, users_m2m=None, create_if_missing=None,
+                                  chunk_size=(1 << 10)):
+        """
+        Partially update some properties of many users.
+
+        :param array users: array with fields ['id': ID, *<property_name: value_type>]
+            contains only the non-repeated values,
+        :param dict? users_m2m: dict of arrays for repeated values:
+            {
+                *<repeated_property_name: {
+                    'name': str,
+                    'array': array with fields ['user_index': uint32, 'value_id': value_type],
+                }>
+            }
+        :param bool? create_if_missing: to control whether an error should be returned or new users
+        should be created when the ``user_id`` does not already exist. (default: False)
+        :param int? chunk_size: split the requests in chunks of this size (default: 1K)
+        """
+        path = f'users-bulk/'
+        data = {}
+        if create_if_missing is not None:
+            data['create_if_missing'] = create_if_missing
+        for users_chunk, users_m2m_chunk in self._chunk_users(users, users_m2m, chunk_size):
+            data['users'] = users_chunk
+            data['users_m2m'] = users_m2m_chunk
+            self.api.patch(path=path, data=data, timeout=60)
+
+    def _chunk_users(self, users, users_m2m, chunk_size):
         users_m2m = users_m2m or []
         # cast dict to list of dict
         if isinstance(users_m2m, dict):
             users_m2m = [{'name': name, 'array': array}
                          for name, array in users_m2m.items()]
-        path = f'users-bulk/'
         n_chunks = int(numpy.ceil(len(users) / chunk_size))
         for i in tqdm(range(n_chunks), disable=(True if n_chunks < 4 else None)):
             start_idx = i * chunk_size
-            end_idx = (i+1) * chunk_size
+            end_idx = (i + 1) * chunk_size
             users_chunk = users[start_idx:end_idx]
             # split M2M array-optimized if any
             users_m2m_chunk = []
@@ -606,11 +661,7 @@ class CrossingMindsApiClient:
                         if start_idx <= row['user_index'] < end_idx
                     ]
                 users_m2m_chunk.append({'name': m2m['name'], 'array': array_chunk})
-            data = {
-                'users': self._userid2body(users_chunk),
-                'users_m2m': users_m2m_chunk,
-            }
-            self.api.put(path=path, data=data, timeout=60)
+            yield self._userid2body(users_chunk), users_m2m_chunk
 
     # === Item Property ===
 
@@ -785,16 +836,71 @@ class CrossingMindsApiClient:
             }
         :param int? chunk_size: split the requests in chunks of this size (default: 1K)
         """
+        path = f'items-bulk/'
+        for items_chunk, items_m2m_chunk in self._chunk_items(items, items_m2m, chunk_size):
+            data = {
+                'items': items_chunk,
+                'items_m2m': items_m2m_chunk,
+            }
+            self.api.put(path=path, data=data, timeout=60)
+
+    @require_login
+    def partial_update_item(self, item, create_if_missing=None):
+        """
+        Partially update some properties of an item.
+
+        :param dict item: item ID and properties {'item_id': ID, *<property_name: property_value>}
+        :param bool? create_if_missing: control whether an error should be returned or a new item
+        should be created when the ``item_id`` does not already exist. (default: false)
+        """
+        item = dict(item)
+        item_id = self._itemid2url(item.pop('item_id'))
+        path = f'items/{item_id}/'
+        data = {
+            'item': item,
+        }
+        if create_if_missing is not None:
+            data['create_if_missing'] = create_if_missing
+        return self.api.patch(path=path, data=data)
+
+    @require_login
+    def partial_update_items_bulk(self, items, items_m2m=None, create_if_missing=None,
+                                  chunk_size=(1 << 10)):
+        """
+        Partially update some properties of many items.
+
+        :param array items: array with fields ['id': ID, *<property_name: value_type>]
+            contains only the non-repeated values,
+        :param array? items_m2m: dict of arrays for repeated values:
+            {
+                *<repeated_property_name: {
+                    'name': str,
+                    'array': array with fields ['item_index': uint32, 'value_id': value_type],
+                }>
+            }
+        :param bool? create_if_missing: control whether an error should be returned or a new item
+        should be created when the ``item_id`` does not already exist. (default: false)
+        :param int? chunk_size: split the requests in chunks of this size (default: 1K)
+        """
+        path = f'items-bulk/'
+        data = {}
+        if create_if_missing is not None:
+            data['create_if_missing'] = create_if_missing
+        for items_chunk, items_m2m_chunk in self._chunk_items(items, items_m2m, chunk_size):
+            data['items'] = items_chunk
+            data['items_m2m'] = items_m2m_chunk
+            self.api.patch(path=path, data=data, timeout=60)
+
+    def _chunk_items(self, items, items_m2m, chunk_size):
         items_m2m = items_m2m or []
         # cast dict to list of dict
         if isinstance(items_m2m, dict):
             items_m2m = [{'name': name, 'array': array}
                          for name, array in items_m2m.items()]
-        path = f'items-bulk/'
         n_chunks = int(numpy.ceil(len(items) / chunk_size))
         for i in tqdm(range(n_chunks), disable=(True if n_chunks < 4 else None)):
             start_idx = i * chunk_size
-            end_idx = (i+1) * chunk_size
+            end_idx = (i + 1) * chunk_size
             items_chunk = items[start_idx:end_idx]
             # split M2M array-optimized if any
             items_m2m_chunk = []
@@ -813,11 +919,7 @@ class CrossingMindsApiClient:
                         if start_idx <= row['item_index'] < end_idx
                     ]
                 items_m2m_chunk.append({'name': m2m['name'], 'array': array_chunk})
-            data = {
-                'items': self._itemid2body(items_chunk),
-                'items_m2m': items_m2m_chunk,
-            }
-            self.api.put(path=path, data=data, timeout=60)
+            yield self._itemid2body(items_chunk), items_m2m_chunk
 
     # === Reco: Item-to-item ===
 
