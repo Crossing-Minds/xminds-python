@@ -1378,15 +1378,19 @@ class CrossingMindsApiClient:
 
     def _userid2url(self, user_id):
         """ base64 encode if needed """
-        if self._database['user_id_type'].startswith('bytes'):
-            return self._b64_encode(user_id)
-        return user_id
+        return self._id2url(user_id, 'user')
 
     def _itemid2url(self, item_id):
         """ base64 encode if needed """
-        if self._database['item_id_type'].startswith('bytes'):
-            return self._b64_encode(item_id)
-        return item_id
+        return self._id2url(item_id, 'item')
+
+    def _id2url(self, data, field):
+        """ base64 encode if needed """
+        if self._database[f'{field}_id_type'].startswith('bytes'):
+            return self._b64_encode(data)
+        if isinstance(data, bytes):
+            return data.decode('ascii')
+        return data
 
     def _userid2body(self, data):
         return self._base_field_id(data, 'user', self._id2body)
@@ -1407,8 +1411,8 @@ class CrossingMindsApiClient:
         if d_type.startswith(('bytes', 'uuid', 'hex', 'urlsafe')):
             if isinstance(data, list):
                 if all(isinstance(d, dict) for d in data):
-                    for row in data:
-                        row[f'{field}_id'] = cast_func(row[f'{field}_id'], d_type)
+                    data = [{**row, f'{field}_id': cast_func(row[f'{field}_id'], d_type)}
+                            for row in data]
                 else:
                     data = [cast_func(row, d_type) for row in data]
             else:
