@@ -15,7 +15,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/Crossing-Minds/xminds-python',
-    packages=['xminds', 'xminds.api', 'xminds.lib', 'xminds.ds'],
+    packages=['xminds', 'xminds.api', 'xminds.lib', 'xminds.ds', 'xminds._lib'],
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',
