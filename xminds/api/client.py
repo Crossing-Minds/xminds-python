@@ -1386,6 +1386,7 @@ class CrossingMindsApiClient:
 
     def _id2url(self, data, field):
         """ base64 encode if needed """
+        assert self._database is not None, f'You need to login to a database first'
         if self._database[f'{field}_id_type'].startswith('bytes'):
             return self._b64_encode(data)
         if isinstance(data, bytes):
