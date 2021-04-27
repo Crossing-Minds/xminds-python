@@ -221,6 +221,8 @@ def clean_dtype(dtype, sort=False):
     dtype = ((field, dtype) for field, (dtype, _) in dtype.fields.items())
     if sort:
         dtype = sorted(dtype)
+    else:
+        dtype = list(dtype)
     return numpy.dtype(dtype)
 
 
