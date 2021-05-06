@@ -172,7 +172,7 @@ class UInt64HashtableTestCase(BaseHashtableTestCase, unittest.TestCase):
         time_pandas = time_end - time_start
         # test xmlib is competitive
         print('xmlib: {:.0f}ms, pandas: {:.0f}ms'.format(1000 * time_xmlib, 1000 * time_pandas))
-        assert time_xmlib < 1.2 * time_pandas
+        assert time_xmlib < 1.25 * time_pandas
 
 
 class UInt64StructHashtableTestCase(BaseHashtableTestCase, unittest.TestCase):
@@ -274,8 +274,18 @@ class StrHashtableTestCase(BytesHashtableTestCase):
     cls = UInt64StructHashmap
     KIND = 'U'
     STR_LEN = 5  # 20bytes
-    cast_dtype = f'U6'  # 1/4 of the smallest multiple of 8 bigger than 4*5
+    CHARS = '๓๔๕๖๗๘北亰☀☂;? `}£μστυφχψωϊϋόύώϏϐϑϒϓϔϕϖϗϘϙϚϛϜϝϞϟϠϡϢϣϤϥϦϧϨϩϪϫϬϭ'
+    cast_dtype = 'U6'  # 1/4 of the smallest multiple of 8 bigger than 4*5
     view_dtype = [(f'f{i}', 'u8') for i in range(3)]
+
+    @classmethod
+    def get_keys(cls, n=None, str_len=None):
+        chars = numpy.array(list(cls.CHARS), dtype='U1')
+        n = n or 1 << 10
+        str_len = str_len or cls.STR_LEN
+        dtype = numpy.dtype(f'{cls.KIND}{str_len}')
+        keys = numpy.random.choice(chars, n * str_len).view(dtype)
+        return keys
 
 
 class BytesObjectHashtableTestCase(BytesHashtableTestCase):

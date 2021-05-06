@@ -619,13 +619,13 @@ def _get_optimal_cast(keys, allow_object_hashmap=False):
         view_dtype = [(f'f{i}', 'u8') for i in range(n_uint64)]
         return UInt64StructHashmap, numpy.dtype(cast_dtype), numpy.dtype(view_dtype)
     # bytes/str objects
-    if kind == 'O':
+    if keys.size and kind == 'O':
         if all(isinstance(k, bytes) for k in keys):
             return BytesObjectHashmap, numpy.dtype('O'), numpy.dtype('O')
         if all(isinstance(k, str) for k in keys):
             return StrObjectHashmap, numpy.dtype('O'), numpy.dtype('O')
     # struct with bytes/str objects
-    if names and all(dtype[n].kind in 'buifcSUVO' for n in names):
+    if keys.size and names and all(dtype[n].kind in 'buifcSUVO' for n in names):
         dtypes = [(n, dtype[n]) for n in names]
         obj_dtypes, nonobj_dtypes = split(dtypes, lambda ndt: ndt[1] == 'O')
         if all(isinstance(k, (str, bytes)) for n, _ in obj_dtypes for k in keys[n]):
