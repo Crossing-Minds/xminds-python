@@ -633,6 +633,26 @@ class CrossingMindsApiClient:
             data['users_m2m'] = users_m2m_chunk
             self.api.patch(path=path, data=data, timeout=60)
 
+    @require_login
+    def delete_user(self, user_id):
+        """
+        Delete a single user;  doesn't wait for task completion
+
+        :param bytes user_id:
+        """
+        user_id_url = self._userid2url(user_id)
+        self.api.delete(f'users/{user_id_url}')
+
+    @require_login
+    def delete_users(self, users_id):
+        """
+        Delete users; doesn't wait for task completion
+
+        :param ID-array users_id: user IDs
+        """
+        data = {'users_id': self._userid2body(users_id)}
+        self.api.delete(path='users-bulk/', data=data)
+
     def _chunk_users(self, users, users_m2m, chunk_size):
         users_m2m = users_m2m or []
         # cast dict to list of dict
@@ -890,6 +910,26 @@ class CrossingMindsApiClient:
             data['items'] = items_chunk
             data['items_m2m'] = items_m2m_chunk
             self.api.patch(path=path, data=data, timeout=60)
+
+    @require_login
+    def delete_item(self, item_id):
+        """
+        Delete a single item;  doesn't wait for task completion
+
+        :param bytes item_id:
+        """
+        item_id_url = self._itemid2url(item_id)
+        self.api.delete(path=f'items/{item_id_url}/')
+
+    @require_login
+    def delete_items(self, items_id):
+        """
+        Delete items; doesn't wait for task completion
+
+        :param ID-array items_id: items IDs
+        """
+        data = {'items_id': self._itemid2body(items_id)}
+        self.api.delete(path='items-bulk/', data=data)
 
     def _chunk_items(self, items, items_m2m, chunk_size):
         items_m2m = items_m2m or []
@@ -1409,15 +1449,14 @@ class CrossingMindsApiClient:
         if not self.b64_encode_bytes:
             return data
         d_type = self._database[f'{field}_id_type']
-        if d_type.startswith(('bytes', 'uuid', 'hex', 'urlsafe')):
-            if isinstance(data, list):
-                if all(isinstance(d, dict) for d in data):
-                    data = [{**row, f'{field}_id': cast_func(row[f'{field}_id'], d_type)}
-                            for row in data]
-                else:
-                    data = [cast_func(row, d_type) for row in data]
-            else:
-                data = cast_func(data, d_type)
+        if not d_type.startswith(('bytes', 'uuid', 'hex', 'urlsafe')):
+            pass
+        elif not isinstance(data, list):
+            data = cast_func(data, d_type)
+        elif all(isinstance(d, dict) for d in data):
+            data = [{**row, f'{field}_id': cast_func(row[f'{field}_id'], d_type)} for row in data]
+        else:
+            data = [cast_func(row, d_type) for row in data]
         return data
 
     def _id2body(self, data, d_type):
