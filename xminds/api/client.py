@@ -1060,6 +1060,27 @@ class CrossingMindsApiClient:
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
 
+    # === Reco: User-to-item-property ===
+
+    @require_login
+    def get_reco_user_to_item_properties(self, user_id, property_name: str, amt=None):
+        """
+        Recommends item-property values given a user ID
+        :param bytes user_id:
+        :param str property_name:
+        :param int? amt: (default 16)  maximal number of property values to return for each property
+        :raises: NotFoundError when data not found
+        :raises: RequestError if property missing
+        :return: {'properties': [n,] np.array, n<=amt}
+        """
+        user_id = self._userid2url(user_id)
+        path = f'recommendation/users/{user_id}/items-properties/{property_name}/'
+        params = {}
+        if amt:
+            params['amt'] = amt
+        resp = self.api.get(path=path, params=params)
+        return resp
+
     # === User Ratings ===
 
     @require_login
