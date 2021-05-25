@@ -1251,7 +1251,9 @@ class CrossingMindsApiClient:
         """
         path = f'interactions-bulk/'
         n_chunks = int(numpy.ceil(len(interactions) / chunk_size))
+        sleep = chunk_size / 500
         for i in tqdm(range(n_chunks), disable=(True if n_chunks < 4 else None)):
+            time.sleep(sleep)
             interactions_chunk = interactions[i*chunk_size:(i+1)*chunk_size]
             interactions_chunk = self._userid2body(self._itemid2body(interactions_chunk))
             data = {
