@@ -1262,6 +1262,30 @@ class CrossingMindsApiClient:
             self.api.post(path=path, data=data, timeout=10)
         return
 
+    @require_login
+    def list_interactions(self, amt=None, cursor=None):
+        """
+        List the interactions of one database
+
+        :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
+        :returns: {
+            'has_next': bool,
+            'next_cursor': str,
+            'interactions': array with fields
+                ['item_id': ID, 'user_id': ID, 'intraction_type': str, 'timestamp': float]
+        }
+        """
+        path = f'interactions-bulk/'
+        params = {}
+        if amt:
+            params['amt'] = amt
+        if cursor:
+            params['cursor'] = cursor
+        resp = self.api.get(path=path, params=params)
+        resp['interactions'] = self._body2userid(self._body2itemid(resp['interactions']))
+        return resp
+
     # === Data Dump Storage ===
 
     @require_login
