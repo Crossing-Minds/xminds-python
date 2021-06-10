@@ -128,7 +128,7 @@ def ufunc_group_by_idx(idx, values, ufunc, init, minlength=None):
     >>> idx  = numpy.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 3, 3, 3])
     >>> values   = numpy.array([0, 1, 2, 3, 4, 0, 2, 4, 6, 0, 4, 6])
     >>> ufunc_group_by_idx(idx, values, numpy.maximum, -1)
-    array([ 4, -1,  6,  6])
+    array([ 4, 6,  -1,  6])
     >>> ufunc_group_by_idx(idx, values, numpy.add, -1)
     array([ 9, 11, -1,  9])
     >>> ufunc_group_by_idx(idx, values, numpy.add, 0)
@@ -140,7 +140,6 @@ def ufunc_group_by_idx(idx, values, ufunc, init, minlength=None):
     return out
 
 
-# TODO: add example in doc
 def min_by_idx(idx, values, minlength=None, fill=None):
     """
     Given array of indexes ``idx`` and array ``values``,
@@ -152,6 +151,15 @@ def min_by_idx(idx, values, minlength=None, fill=None):
     :param int? minlength: (default: idx.max() + 1)
     :param float? fill: filling value for missing idx (default: +inf)
     :returns: (min-length,) float array, such that out[i] = min(values[idx==i])
+
+    Example
+    _______
+    >>> idx  = numpy.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 3, 3, 3])
+    >>> values   = numpy.array([1, 1, 2, 3, 4, 0, 2, 4, 6, 0, 4, 6])
+    >>> min_by_idx(idx, values, fill=100)
+    array([  1,   0, 100,   0])
+    >>> min_by_idx(idx, values)
+    array([1, 0, 9223372036854775807, 0])
     """
     assert idx.dtype.kind == 'u' or (idx.dtype.kind == 'i' and (idx >= 0).all()), (
         'Can only use get_xx_by_idx with integer idx, where (idx >= 0).all()')
@@ -162,7 +170,6 @@ def min_by_idx(idx, values, minlength=None, fill=None):
     return ufunc_group_by_idx(idx, values, numpy.minimum, fill, minlength=minlength)
 
 
-# TODO: add example in doc
 def max_by_idx(idx, values, minlength=None, fill=None):
     """
     Given array of indexes ``idx`` and array ``values``,
@@ -174,6 +181,17 @@ def max_by_idx(idx, values, minlength=None, fill=None):
     :param int? minlength: (default: idx.max() + 1)
     :param float? fill: filling value for missing idx (default: -inf)
     :returns: (min-length,) float array, such that out[i] = max(values[idx==i])
+
+    Example
+    _______
+    >>> idx  = numpy.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 3, 3, 3])
+    >>> values   = numpy.array([0, 1, 2, 3, 4, 0, 2, 4, 6, 0, 4, 6])
+    >>> max_by_idx(idx, values, fill=-1)
+    array([ 4, 6,  -1,  6])
+    >>> max_by_idx(idx, values, minlength=10, fill=-1)
+    array([ 4,  6, -1,  6, -1, -1, -1, -1, -1, -1])
+    >>> max_by_idx(idx, values)
+    array([ 4, 6, -9223372036854775808, 6])
     """
     assert idx.dtype.kind == 'u' or (idx.dtype.kind == 'i' and (idx >= 0).all()), (
         'Can only use get_xx_by_idx with integer idx, where all idx >= 0')
@@ -184,7 +202,6 @@ def max_by_idx(idx, values, minlength=None, fill=None):
     return ufunc_group_by_idx(idx, values, numpy.maximum, fill, minlength=minlength)
 
 
-# TODO: add example in doc
 def argmin_by_idx(idx, values, minlength=None, fill=None):
     """
     Given array of indexes ``idx`` and array ``values``,
@@ -198,6 +215,15 @@ def argmin_by_idx(idx, values, minlength=None, fill=None):
     :param float? fill: filling value for missing idx (default: -1)
     :returns: (min-length,) int32 array, such that
               out[i] = argmin_{idx}(values[idx] : idx[idx] == i)
+
+    Example
+    _______
+    >>> idx  = numpy.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 3, 3, 3])
+    >>> values   = numpy.array([0, 1, 2, 3, 4, 0, 2, 4, 6, 0, 4, 6])
+    >>> argmin_by_idx(idx, values, fill=-1)
+    array([ 0,  5, -1,  9])
+    >>> argmin_by_idx(idx, values, minlength=10, fill=-1)
+    array([ 0,  5, -1,  9, -1, -1, -1, -1, -1, -1])
     """
     assert idx.dtype.kind == 'u' or (idx.dtype.kind == 'i' and (idx >= 0).all()), (
         'Can only use get_xx_by_idx with integer idx, where all idx >= 0')
@@ -210,7 +236,7 @@ def argmin_by_idx(idx, values, minlength=None, fill=None):
     return out
 
 
-# TODO: improve test and add example in doc
+# TODO: improve test
 def value_at_argmin_by_idx(idx, sorting_values, fill, output_values=None, minlength=None):
     """
     Wrapper around argmin_by_idx and get_value_by_idx.
@@ -226,6 +252,15 @@ def value_at_argmin_by_idx(idx, sorting_values, fill, output_values=None, minlen
     :param int? minlength: minimum shape for the output array.
     :returns array: (max_idx+1,), dtype array such that
         out[i] = min(values[idx==i])
+
+    Example
+    _______
+    >>> idx  = numpy.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 3, 3, 3])
+    >>> values   = numpy.array([0, 1, 2, 3, 4, 0, 2, 4, 6, 0, 4, 6])
+    >>> value_at_argmin_by_idx(idx, values, fill=-1)
+    array([ 0,  0, -1,  0])
+    >>> value_at_argmin_by_idx(idx, values, minlength=10, fill=-1)
+    array([ 0,  0, -1,  0, -1, -1, -1, -1, -1, -1])
     """
     assert idx.dtype.kind == 'u' or (idx.dtype.kind == 'i' and (idx >= 0).all()), (
         'Can only use get_xx_by_idx with integer idx, where all idx >= 0')
@@ -241,7 +276,6 @@ def value_at_argmin_by_idx(idx, sorting_values, fill, output_values=None, minlen
     return out
 
 
-# TODO: add example in doc
 def argmax_by_idx(idx, values, minlength=None, fill=None):
     """
     Given array of indexes ``idx`` and array ``values``,
@@ -255,6 +289,15 @@ def argmax_by_idx(idx, values, minlength=None, fill=None):
     :param float? fill: filling value for missing idx (default: -1)
     :returns: (min-length,) int32 array, such that
               out[i] = argmax_{idx}(values[idx] : idx[idx] == i)
+
+    Example
+    _______
+    >>> idx  = numpy.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 3, 3, 3])
+    >>> values   = numpy.array([0, 1, 2, 3, 4, 0, 2, 4, 6, 0, 4, 6])
+    >>> argmax_by_idx(idx, values, fill=-1)
+    array([ 4,  8, -1, 11])
+    >>> argmax_by_idx(idx, values, minlength=10, fill=-1)
+    array([ 4,  8, -1, 11, -1, -1, -1, -1, -1, -1])
     """
     assert idx.dtype.kind == 'u' or (idx.dtype.kind == 'i' and (idx >= 0).all()), (
         'Can only use get_xx_by_idx with integer idx, where all idx >= 0')
@@ -267,7 +310,7 @@ def argmax_by_idx(idx, values, minlength=None, fill=None):
     return out
 
 
-# TODO: improve test and add example in doc
+# TODO: improve test
 def value_at_argmax_by_idx(idx, sorting_values, fill, output_values=None, minlength=None):
     """
     Wrapper around ``argmax_by_idx`` and ``get_value_by_id``.
@@ -283,6 +326,15 @@ def value_at_argmax_by_idx(idx, sorting_values, fill, output_values=None, minlen
     :param int? minlength: minimum shape for the output array.
     :returns array: (max_idx+1,), dtype array such that
         out[i] = max(values[idx==i])
+
+    Example
+    _______
+    >>> idx  = numpy.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 3, 3, 3])
+    >>> values   = numpy.array([0, 1, 2, 3, 4, 0, 2, 4, 6, 0, 4, 6])
+    >>> value_at_argmax_by_idx(idx, values, fill=-1)
+    array([ 4,  6, -1,  6])
+    >>> value_at_argmax_by_idx(idx, values, minlength=10, fill=-1)
+    array([ 4,  6, -1,  6, -1, -1, -1, -1, -1, -1])
     """
     assert idx.dtype.kind == 'u' or (idx.dtype.kind == 'i' and (idx >= 0).all()), (
         'Can only use get_xx_by_idx with integer idx, where all idx >= 0')
@@ -449,7 +501,6 @@ def get_most_common_by_idx(idx, values, fill, minlength=None):
     return out
 
 
-# TODO: add example in doc
 def average_by_idx(idx, values, weights=None, minlength=None, fill=0, dtype='float64'):
     """
     Compute average-by-idx given array of indexes ``idx``, ``values``, and optional ``weights``
@@ -461,6 +512,16 @@ def average_by_idx(idx, values, weights=None, minlength=None, fill=0, dtype='flo
     :param float? fill: filling value for missing idx (default: 0)
     :param str? dtype: (default: 'float32')
     :returns: (min-length,) float array, such that out[i] = mean(values[idx==i])
+
+    Example
+    _______
+    >>> idx  = numpy.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 3, 3, 3])
+    >>> values   = numpy.array([0, 1, 2, 3, 4, 0, 2, 4, 6, 0, 4, 6])
+    >>> average_by_idx(idx, values, fill=0)
+    array([ 2.        ,  3.        , 0.        ,  3.33333333])
+    >>> weights = numpy.array([0, 1, 0, 0, 0, 1, 2, 3, 4, 1, 1, 0])
+    >>> average_by_idx(idx, values, weights=weights, fill=0)
+    array([ 1.,  4., 0.,  2.])
     """
     assert idx.dtype.kind == 'u' or (idx.dtype.kind == 'i' and (idx >= 0).all()), (
         'Can only use get_xx_by_idx with integer idx, where (idx >= 0).all()')

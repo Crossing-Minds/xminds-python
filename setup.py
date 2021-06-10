@@ -1,6 +1,7 @@
 """ Crossing Minds data science python library and API client
 
 See our [readthedocs](https://xminds.readthedocs.io/en/latest/) for the Python Data Science library documentation.
+
 See the [API Documentation](https://docs.api.crossingminds.com/) for the Crossing Minds universal recommendation API documentation.
 
 Our tools are licensed under the MIT License.
