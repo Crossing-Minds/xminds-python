@@ -366,13 +366,23 @@ class SearchTestCase(unittest.TestCase):
 
 
 def test_cumcount_by_value():
-    input = numpy.asarray([0, 0, 0, 0, 1, 1, 1, 3, 3, 3, 3, 3])
+    arr = numpy.asarray([0, 0, 0, 0, 1, 1, 1, 3, 3, 3, 3, 3])
     expected = numpy.asarray([0, 1, 2, 3, 0, 1, 2, 0, 1, 2, 3, 4])
     # sorted
-    assert (cumcount_by_value(input, assume_sorted=True) == expected).all()
+    assert (cumcount_by_value(arr, assume_sorted=True) == expected).all()
     # shuffled
-    numpy.random.shuffle(input)
-    output = cumcount_by_value(input)
+    numpy.random.shuffle(arr)
+    output = cumcount_by_value(arr)
     for idx in range(4):
-        is_idx = input == idx
+        is_idx = arr == idx
         assert (output[is_idx] == numpy.arange(is_idx.sum())).all()
+
+    # with factorize
+    arr = numpy.array(['A', 'B', 'A', 'C', 'A', 'C', 'B', '0'], dtype='U1')
+    expected = numpy.asarray([0, 0, 1, 0, 2, 1, 1, 0])
+    assert (cumcount_by_value(arr, assume_sorted=False) == expected).all()
+
+    # with assume_sorted (arbitrary order)
+    arr = numpy.array(['A', 'A', 'A', 'C', 'C', '0', 'B', 'B'], dtype='U1')
+    expected = numpy.asarray([0, 1, 2, 0, 1, 0, 0, 1])
+    assert (cumcount_by_value(arr, assume_sorted=True) == expected).all()

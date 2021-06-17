@@ -451,6 +451,8 @@ def cumcount_by_value(values, assume_sorted=False):
 
     :param array values: uint32 array
     :param bool? assume_sorted: if True, the input values are assumed sorted (``default: False``)
+        for non-integer values, the sort order can be arbitrary (see examples below)
+        for integers values, the order must be the one of increasing integers
     :returns: array of int
 
     Example
@@ -461,6 +463,15 @@ def cumcount_by_value(values, assume_sorted=False):
     >>> array = numpy.array(['beta', 'alpha', 'gamma', 'alpha', 'beta', 'alpha', 'delta'])
     >>> cumcount_by_value(array)
     array([0, 0, 0, 1, 1, 2, 0])
+    >>> array = numpy.array(['A', 'B', 'B', 'C', 'C', 'C'])
+    >>> cumcount_by_value(array, assume_sorted=True)
+    array([0, 0, 1, 0, 1, 2])
+
+    When using ``assume_sorted`` on non-integer values, the order can be arbitrary:
+
+    >>> ['B', 'B', 'C', 'C', 'C', 'A']
+    >>> cumcount_by_value(array, assume_sorted=True)
+    array([0, 1, 0, 1, 2, 0])
     """
     if len(values) == 0:
         return []
@@ -468,11 +479,16 @@ def cumcount_by_value(values, assume_sorted=False):
     if values.dtype.kind in 'ui':
         if min(values) >= 0 and max(values) < (1 << 6) * len(values):
             convert = False
-    if not assume_sorted:
-        argsort = numpy.argsort(values, kind='stable')
-        values = values[argsort]
+    if convert and assume_sorted:
+        values = numpy.asarray(values)
+        where_diff, = numpy.where(values[1:] != values[:-1])
+        n_per_value = numpy.r_[-1, where_diff, values.size - 1]
+        n_per_value[1:] -= n_per_value[:-1]
+        return _arange_sequence(n_per_value[1:])
     if convert:
         values, _, _ = factorize(values)
+    if not assume_sorted:
+        argsort = numpy.argsort(values, kind='stable')
     # values        0 0 0 0 1 1 1 3 3 3 3 3
     # n_per_idx     4 3 0 5
     n_per_idx = numpy.bincount(values)
