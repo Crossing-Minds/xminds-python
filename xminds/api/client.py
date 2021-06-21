@@ -964,14 +964,17 @@ class CrossingMindsApiClient:
     # === Reco: Item-to-item ===
 
     @require_login
-    def get_reco_item_to_items(self, item_id, amt=None, cursor=None, filters=None):
+    def get_reco_item_to_items(self, item_id, amt=None, cursor=None,
+                               scenario=None, filters=None, reranking=None):
         """
         Get similar items.
 
         :param ID item_id: item ID
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
+        :param str? scenario: name of scenario
         :param list-str? filters: Filter by properties. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param list-str? reranking: Re-ranking by properties. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
@@ -986,6 +989,10 @@ class CrossingMindsApiClient:
             params['cursor'] = cursor
         if filters:
             params['filters'] = filters
+        if reranking:
+            params['reranking'] = reranking
+        if scenario:
+            params['scenario'] = scenario
         resp = self.api.get(path=path, params=params)
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
@@ -994,7 +1001,8 @@ class CrossingMindsApiClient:
 
     @require_login
     def get_reco_session_to_items(self, ratings=None, user_properties=None,
-                                  amt=None, cursor=None, filters=None, exclude_rated_items=None):
+                                  amt=None, cursor=None, scenario=None, filters=None,
+                                  reranking=None, exclude_rated_items=None):
         """
         Get items recommendations given the ratings of an anonymous session.
 
@@ -1002,7 +1010,9 @@ class CrossingMindsApiClient:
         :param dict? user_properties: user properties {**property_name: property_value(s)}
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
+        :param str? scenario: scenario name
         :param list-str? filters: Filter by properties. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param list-str? reranking: Re-ranking by properties. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
         :param bool? exclude_rated_items: exclude rated items from response
         :returns: {
             'items_id': array of items IDs,
@@ -1021,8 +1031,12 @@ class CrossingMindsApiClient:
             data['cursor'] = cursor
         if filters:
             data['filters'] = filters
+        if reranking:
+            data['reranking'] = reranking
         if exclude_rated_items is not None:
             data['exclude_rated_items'] = exclude_rated_items
+        if scenario:
+            data['scenario'] = scenario
         resp = self.api.post(path=path, data=data)
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
@@ -1030,7 +1044,8 @@ class CrossingMindsApiClient:
     # === Reco: User-to-item ===
 
     @require_login
-    def get_reco_user_to_items(self, user_id, amt=None, cursor=None, filters=None,
+    def get_reco_user_to_items(self, user_id, amt=None, cursor=None, scenario=None,
+                               filters=None, reranking=None,
                                exclude_rated_items=None):
         """
         Get items recommendations given a user ID.
@@ -1038,7 +1053,9 @@ class CrossingMindsApiClient:
         :param ID user_id: user ID
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
+        :param str? scenario: scenario's name
         :param list-str? filters: Filter by properties. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param list-str? reranking: Re-ranking by properties. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
         :param bool? exclude_rated_items: exclude rated items from response
         :returns: {
             'items_id': array of items IDs,
@@ -1054,8 +1071,12 @@ class CrossingMindsApiClient:
             params['cursor'] = cursor
         if filters:
             params['filters'] = filters
+        if reranking:
+            params['reranking'] = reranking
         if exclude_rated_items is not None:
             params['exclude_rated_items'] = exclude_rated_items
+        if scenario:
+            params['scenario'] = scenario
         resp = self.api.get(path=path, params=params)
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
@@ -1450,6 +1471,121 @@ class CrossingMindsApiClient:
                 sys.stdout.flush()
             i += 1
         raise RuntimeError(f'task {task_name} not done before {timeout}s. Last response: {task}')
+
+    # === Scenarios ===
+
+    @require_login
+    def get_scenario(self, reco_type, name):
+        """
+        Get a scenario
+        :param str reco_type
+        :param str name:
+        :raise: NotFoundError if not found
+        :return:
+        {
+            'name': str,
+            'reco_type': str
+            'filters?': [dict],
+            'reranking?': [dict],
+            'exclude_rated_items?': bool
+        }
+        """
+        path = f'scenarios/{reco_type}/{name}/'
+        return self.api.get(path=path)
+
+    @require_login
+    def list_scenarios(self):
+        """
+        Get all scenarios
+        :return: scenarios
+        {
+            'scenarios': [
+                {
+                    'name': str,
+                    'reco_type': str
+                    'filters?': [dict],
+                    'reranking?': [dict],
+                    'exclude_rated_items?': bool
+                }
+            ]
+        }
+        """
+        path = f'scenarios/'
+        return self.api.get(path=path)
+
+    @require_login
+    def create_scenario(self, reco_type, name, scenario):
+        """
+        Create a new scenario.
+        A scenario should take this form:
+
+            scenario = {
+                'filters?': [
+                        {'property_name': 'tags', 'op': 'EQ', 'value': 'pi'},
+                        {'property_name': 'price', 'op': 'GEQ', 'value': 3.14}
+                ],
+                'reranking?': [
+                        {'property_name"': 'director', 'op': 'diversity', 'weight': 0.8}
+                ],
+                'exclude_rated_items?': True
+            }
+        :param str reco_type: accepted values
+            "item_to_items", "profile_to_items", "session_to_items"
+        :param str name: name of the scenario
+        :param dict scenario; see structure above
+        :raise: RequestError if some business rule is invalid
+        """
+        path = f'scenarios/{reco_type}/{name}/'
+        data = scenario
+        self.api.put(path=path, data=data)
+
+    @require_login
+    def delete_scenario(self, reco_type, name):
+        """
+        Delete scenario with provided name.
+        :param str reco_type:
+        :param str name:
+        :raise: NotFoundError if not found
+        """
+        path = f'scenarios/{reco_type}/{name}/'
+        self.api.delete(path=path)
+
+    # === Default Scenario ===
+
+    @require_login
+    def get_default_scenario(self, reco_type):
+        """
+        Get default scenario
+        :param str reco_type:
+        :raise: NotFoundError if no default scenario
+        :return:
+        {
+            'name': str,
+            'reco_type': str
+            'filters?': [dict],
+            'reranking?': [dict],
+            'exclude_rated_items?': bool
+        }
+        """
+        path = f'scenarios-default/{reco_type}/'
+        return self.api.get(path=path)
+
+    @require_login
+    def set_default_scenario(self, reco_type, name):
+        """
+        Set scenario as default for a reco type
+        """
+        path = f'scenarios-default/{reco_type}/'
+        data = {'name': name}
+        self.api.put(path=path, data=data)
+
+    @require_login
+    def unset_default_scenario(self, reco_type):
+        """
+        Unset default scenario for a reco type
+        """
+        path = f'scenarios-default/{reco_type}/'
+        self.api.delete(path=path)
 
     # === Utils ===
 
