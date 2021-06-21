@@ -1577,7 +1577,7 @@ class CrossingMindsApiClient:
         """
         path = f'scenarios-default/{reco_type}/'
         data = {'name': name}
-        self.api.put(path=path, data=data)
+        self.api.patch(path=path, data=data)
 
     @require_login
     def unset_default_scenario(self, reco_type):
