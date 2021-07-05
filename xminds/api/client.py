@@ -563,7 +563,8 @@ class CrossingMindsApiClient:
         return self.api.put(path=path, data=data)
 
     @require_login
-    def create_or_update_users_bulk(self, users, users_m2m=None, chunk_size=(1<<10)):
+    def create_or_update_users_bulk(self, users, users_m2m=None, wait_for_completion=None,
+                                    chunk_size=(1<<10)):
         """
         Create many users in bulk, or update the ones for which the id already exist.
 
@@ -577,6 +578,7 @@ class CrossingMindsApiClient:
                 }>
             }
         :param int? chunk_size: split the requests in chunks of this size (default: 1K)
+        :param bool? wait_for_completion: (default: True)
         """
         path = f'users-bulk/'
         for users_chunk, users_m2m_chunk in self._chunk_users(users, users_m2m, chunk_size):
@@ -584,6 +586,8 @@ class CrossingMindsApiClient:
                 'users': users_chunk,
                 'users_m2m': users_m2m_chunk
             }
+            if wait_for_completion is not None:
+                data['wait_for_completion'] = wait_for_completion
             self.api.put(path=path, data=data, timeout=60)
 
     @require_login
@@ -841,7 +845,8 @@ class CrossingMindsApiClient:
         return self.api.put(path=path, data=data)
 
     @require_login
-    def create_or_update_items_bulk(self, items, items_m2m=None, chunk_size=(1<<10)):
+    def create_or_update_items_bulk(self, items, items_m2m=None, wait_for_completion=None,
+                                    chunk_size=(1<<10)):
         """
         Create many items in bulk, or update the ones for which the id already exist.
 
@@ -854,6 +859,7 @@ class CrossingMindsApiClient:
                     'array': array with fields ['item_index': uint32, 'value_id': value_type],
                 }>
             }
+        :param bool? wait_for_completion: (default: true)
         :param int? chunk_size: split the requests in chunks of this size (default: 1K)
         """
         path = f'items-bulk/'
@@ -862,6 +868,8 @@ class CrossingMindsApiClient:
                 'items': items_chunk,
                 'items_m2m': items_m2m_chunk,
             }
+            if wait_for_completion is not None:
+                data['wait_for_completion'] = wait_for_completion
             self.api.put(path=path, data=data, timeout=60)
 
     @require_login
@@ -1471,6 +1479,26 @@ class CrossingMindsApiClient:
                 sys.stdout.flush()
             i += 1
         raise RuntimeError(f'task {task_name} not done before {timeout}s. Last response: {task}')
+
+    # === Trained Models ===
+
+    @require_login
+    def list_trained_models(self):
+        """
+        Get all trained models
+        :return: trained models
+        {
+            'trained_models': [
+                {
+                    'id': str,
+                    'trained_timestamp': str
+                    'algorithm': str,
+                }
+            ]
+        }
+        """
+        path = f'trained-models/'
+        return self.api.get(path=path)
 
     # === Scenarios ===
 
