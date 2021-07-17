@@ -982,9 +982,9 @@ class CrossingMindsApiClient:
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
         :param str? scenario: name of scenario
-        :param list-str? filters: Filter by properties. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
-        :param list-str? reranking: Re-ranking by properties. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
-        :param list-str? algorithms: Whitelist algorithms. Format: ['<algorithm_name>', ... ]
+        :param list-str? filters: Item-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
+        :param str? algorithms: Algorithms whitelist. Format: '<algorithm_name>|<algorithm_name>|...'
         :param bool? skip_default_scenario: True to skip default scenario if any
         :returns: {
             'items_id': array of items IDs,
@@ -1027,10 +1027,10 @@ class CrossingMindsApiClient:
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
         :param str? scenario: scenario name
-        :param list-str? filters: Filter by properties. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
-        :param list-str? reranking: Re-ranking by properties. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
+        :param list-str? filters: Item-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
         :param bool? exclude_rated_items: exclude rated items from response
-        :param list-str? algorithms: Whitelist algorithms. Format: ['<algorithm_name>', ... ]
+        :param str? algorithms: Algorithms whitelist. Format: '<algorithm_name>|<algorithm_name>|...'
         :param bool? skip_default_scenario: True to skip default scenario if any
         :returns: {
             'items_id': array of items IDs,
@@ -1077,10 +1077,10 @@ class CrossingMindsApiClient:
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
         :param str? scenario: scenario's name
-        :param list-str? filters: Filter by properties. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
-        :param list-str? reranking: Re-ranking by properties. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
+        :param list-str? filters: Item-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
         :param bool? exclude_rated_items: exclude rated items from response
-        :param list-str? algorithms: Whitelist algorithms. Format: ['<algorithm_name>', ... ]
+        :param str? algorithms: Algorithms whitelist. Format: '<algorithm_name>|<algorithm_name>|...'
         :param bool? skip_default_scenario: True to skip default scenario if any
         :returns: {
             'items_id': array of items IDs,
@@ -1119,7 +1119,7 @@ class CrossingMindsApiClient:
         :param bytes user_id:
         :param str property_name:
         :param int? amt: (default 16)  maximal number of property values to return for each property
-        :param list-str? algorithms: Whitelist algorithms. Format: ['<algorithm_name>', ... ]
+        :param str? algorithms: Algorithms whitelist. Format: '<algorithm_name>|<algorithm_name>|...'
         :raises: NotFoundError when data not found
         :raises: RequestError if property missing
         :return: {'properties': [n,] np.array, n<=amt}
@@ -1539,7 +1539,8 @@ class CrossingMindsApiClient:
             'reco_type': str
             'filters?': [dict],
             'reranking?': [dict],
-            'exclude_rated_items?': bool
+            'exclude_rated_items?': bool,
+            'algorithms?': str
         }
         """
         path = f'scenarios/{reco_type}/{name}/'
@@ -1557,7 +1558,8 @@ class CrossingMindsApiClient:
                     'reco_type': str
                     'filters?': [dict],
                     'reranking?': [dict],
-                    'exclude_rated_items?': bool
+                    'exclude_rated_items?': bool,
+                    'algorithms?': str
                 }
             ]
         }
@@ -1579,7 +1581,8 @@ class CrossingMindsApiClient:
                 'reranking?': [
                         {'property_name"': 'director', 'op': 'diversity', 'weight': 0.8}
                 ],
-                'exclude_rated_items?': True
+                'exclude_rated_items?': True,
+                'algorithms?': 'algo1|algo2'
             }
         :param str reco_type: accepted values
             "item_to_items", "profile_to_items", "session_to_items"
@@ -1613,10 +1616,6 @@ class CrossingMindsApiClient:
         :return:
         {
             'name': str,
-            'reco_type': str
-            'filters?': [dict],
-            'reranking?': [dict],
-            'exclude_rated_items?': bool
         }
         """
         path = f'scenarios-default/{reco_type}/'
