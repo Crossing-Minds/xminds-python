@@ -1573,22 +1573,36 @@ class CrossingMindsApiClient:
         Create a new scenario.
         A scenario should take this form:
 
-            scenario = {
-                'filters?': [
-                        {'property_name': 'tags', 'op': 'EQ', 'value': 'pi'},
-                        {'property_name': 'price', 'op': 'GEQ', 'value': 3.14}
-                ],
-                'reranking?': [
-                        {'property_name"': 'director', 'op': 'diversity', 'weight': 0.8}
-                ],
-                'exclude_rated_items?': True,
-                'algorithms?': 'algo1|algo2'
-            }
         :param str reco_type: accepted values
             "item_to_items", "profile_to_items", "session_to_items"
         :param str name: name of the scenario
-        :param dict scenario; see structure above
+        :param dict scenario: a ``?`` in a key means the key is optional
+            {
+                'filters?': [dict],
+                'reranking?': [dict],
+                'exclude_rated_items?': bool,
+                'algorithms?': str
+            }
         :raise: RequestError if some business rule is invalid
+
+        Example
+        _______
+        api.create_scenario(
+            reco_type='profile_to_items', 
+            name='my_scenario_name',
+            scenario = {
+                'filters': [
+                        {'property_name': 'tags', 'op': 'EQ', 'value': 'pi'},
+                        {'property_name': 'price', 'op': 'GEQ', 'value': 3.14}
+                ],
+                'reranking': [
+                        {'property_name"': 'director', 'op': 'diversity', 'weight': 0.8}
+                ],
+                'algorithms': 'algo1|algo2',
+                # only for reco types "profile_to_items", "session_to_items":
+                'exclude_rated_items': True,
+            }
+        )
         """
         path = f'scenarios/{reco_type}/{name}/'
         data = scenario
