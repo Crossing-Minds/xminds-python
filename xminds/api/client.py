@@ -1383,21 +1383,31 @@ class CrossingMindsApiClient:
         return self.api.post(path=path, data=data)
 
     @require_login
-    def get_background_tasks(self, task_name):
+    def get_background_tasks(self, task_name, page=None, amt=None):
         """
         List currently running background tasks such as ML models training.
 
-        :param str task_name: for instance ``'ml_model_retrain'``
+        :param str task_name: names allowed ``ml_model_retrain``,
+        ``item_popularity_score_recalibrate``, ``ml_new_users``, ``ml_new_items``
+        :param int? page: page number (default: 1)
+        :param int? amt: amount of tasks by page (default: 50)
         :returns: {
             'tasks': [{
-                'name': string, Task name
-                'start_time': int, Start timestamp
-                'details': dict, Execution details, like progress message
+                'task_id': str,
+                'name': str,
+                'start_time': int,
+                'status': str,
+                'progress?': str,
             }],
         }
         """
+        params = {}
+        if page is not None:
+            params['page'] = page
+        if amt is not None:
+            params['amt'] = amt
         path = f'tasks/{self.escape_url(task_name)}/recents/'
-        return self.api.get(path=path)
+        return self.api.get(path=path, params=params)
 
     def wait_until_ready(self, timeout=600, sleep=1):
         """
@@ -1461,7 +1471,7 @@ class CrossingMindsApiClient:
             task_name, timeout, sleep, msg=msg, filtr=lambda t: t['task_id'] == task_id)
 
     def wait_for_background_task(self, task_name, timeout=600, sleep=1, msg=None, filtr=None,
-                                 wait_if_no_task=True):
+                                 wait_if_no_task=True, func_list_tasks=None):
         """
         Wait for a certain background task. Optionally specified with ``filtr`` function
 
@@ -1471,6 +1481,7 @@ class CrossingMindsApiClient:
         :param str? msg: either ``None`` to disable print, or message prefix (default: None)
         :param func? filtr: filter function(task: bool)
         :param bool? wait_if_no_task: wait (instead of return) if there is no task satisfying filter
+        :param func? func_list_tasks: function to list background tasks (default: self.get_background_tasks)
         :returns: True is a task satisfying filters successfully ran, False otherwise
         :raises: RuntimeError if ``timeout`` is reached or if the task failed
         """
@@ -1479,11 +1490,12 @@ class CrossingMindsApiClient:
         time_start = time.time()
         time_waited = 0
         i = 0
+        func_list_tasks = func_list_tasks or self.get_background_tasks
         while time_waited < timeout:
             time.sleep(sleep)
             time_waited = time.time() - time_start
             print_time = f'{int(time_waited) // 60:d}m{int(time_waited) % 60:02d}s'
-            tasks = self.get_background_tasks(task_name)['tasks']
+            tasks = func_list_tasks(task_name)['tasks']
             try:
                 task = max(filter(filtr, tasks), key=lambda t: t['start_time'])
             except ValueError:
