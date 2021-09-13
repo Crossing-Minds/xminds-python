@@ -1,4 +1,5 @@
 import numpy
+import struct
 import warnings
 
 from .compat import structured_cast
@@ -12,7 +13,6 @@ try:
 except ImportError:
     _HAS_XXHASH = False
     import hashlib
-    import struct
 
 # Pure numpy implementation of hashmaps
 # This file implements low level classes, but as a user you should try to use:
