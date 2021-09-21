@@ -1592,29 +1592,62 @@ class CrossingMindsApiClient:
         :param str name: name of the scenario
         :param dict scenario: a ``?`` in a key means the key is optional
             {
-                'filters?': [dict],
-                'reranking?': [dict],
-                'exclude_rated_items?': bool,
-                'algorithms?': str
+                'scenario_type': str,   # 'case', 'ab_test' or 'condition'
+                'case?: {
+                    'filters?': [dict],
+                    'reranking?': [dict],
+                    'exclude_rated_items?': bool,
+                    'algorithms?': str
+                },
+                'ab_test?': {
+                    'id': str,
+                    'scenario_a': str,
+                    'scenario_b': str
+                },
+                'condition': {
+                    'condition_type': str,
+                    'if': dict,  # FIXME
+                    'then': str,   # scenario name
+                    'else': str    # scenario name
+                }
             }
         :raise: RequestError if some business rule is invalid
+        :raise: NotFoundError if an AB-test or a then/else scenario is not found
 
         Example
         _______
         api.create_scenario(
-            reco_type='profile_to_items', 
+            reco_type='profile_to_items',
             name='my_scenario_name',
             scenario = {
-                'filters': [
-                        {'property_name': 'tags', 'op': 'EQ', 'value': 'pi'},
-                        {'property_name': 'price', 'op': 'GEQ', 'value': 3.14}
-                ],
-                'reranking': [
-                        {'property_name"': 'director', 'op': 'diversity', 'weight': 0.8}
-                ],
-                'algorithms': 'algo1|algo2',
-                # only for reco types "profile_to_items", "session_to_items":
-                'exclude_rated_items': True,
+                'scenario_type': 'case',
+                'case': {
+                    'filters': [
+                            {'property_name': 'tags', 'op': 'EQ', 'value': 'pi'},
+                            {'property_name': 'price', 'op': 'GEQ', 'value': 3.14}
+                    ],
+                    'reranking': [
+                            {'property_name"': 'director', 'op': 'diversity', 'weight': 0.8}
+                    ],
+                    'algorithms': 'algo1|algo2',
+                    # only for reco types "profile_to_items", "session_to_items":
+                    'exclude_rated_items': True,
+                }
+            }
+        )
+
+        Example
+        _______
+        api.create_scenario(
+            reco_type='profile_to_items',
+            name='my_conditional_scenario',
+            scenario = {
+                'scenario_type': 'ab_test',
+                'ab_test': {
+                    'if': 'my_ab_test_id',
+                    'scenario_a': 'scenar1',
+                    'scenario_b': 'scenar2'
+                }
             }
         )
         """
