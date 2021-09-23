@@ -1185,6 +1185,7 @@ class CrossingMindsApiClient:
         """
         path = f'ratings-bulk/'
         n_chunks = int(numpy.ceil(len(ratings) / chunk_size))
+        sleep = chunk_size / 500
         for i in tqdm(range(n_chunks), disable=(True if n_chunks < 4 else None)):
             ratings_chunk = ratings[i*chunk_size:(i+1)*chunk_size]
             ratings_chunk = self._userid2body(self._itemid2body(ratings_chunk))
@@ -1192,6 +1193,8 @@ class CrossingMindsApiClient:
                 'ratings': ratings_chunk,
             }
             self.api.put(path=path, data=data, timeout=60)
+            if n_chunks > 1:
+                time.sleep(sleep)
         return
 
     @require_login
