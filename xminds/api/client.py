@@ -973,7 +973,7 @@ class CrossingMindsApiClient:
 
     @require_login
     def get_reco_item_to_items(self, item_id, amt=None, cursor=None,
-                               scenario=None, filters=None, reranking=None, algorithms=None,
+                               scenario=None, filters=None, reranking=None,
                                skip_default_scenario=None):
         """
         Get similar items.
@@ -984,7 +984,6 @@ class CrossingMindsApiClient:
         :param str? scenario: name of scenario
         :param list-str? filters: Item-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
         :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
-        :param str? algorithms: Algorithms whitelist. Format: '<algorithm_name>|<algorithm_name>|...'
         :param bool? skip_default_scenario: True to skip default scenario if any
         :returns: {
             'items_id': array of items IDs,
@@ -1004,8 +1003,6 @@ class CrossingMindsApiClient:
             params['reranking'] = reranking
         if scenario:
             params['scenario'] = scenario
-        if algorithms:
-            params['algorithms'] = algorithms
         if skip_default_scenario is not None:
             params['skip_default_scenario'] = skip_default_scenario
         resp = self.api.get(path=path, params=params)
@@ -1017,7 +1014,7 @@ class CrossingMindsApiClient:
     @require_login
     def get_reco_session_to_items(self, ratings=None, user_properties=None,
                                   amt=None, cursor=None, scenario=None, filters=None,
-                                  reranking=None, exclude_rated_items=None, algorithms=None,
+                                  reranking=None, exclude_rated_items=None,
                                   skip_default_scenario=None):
         """
         Get items recommendations given the ratings of an anonymous session.
@@ -1030,7 +1027,6 @@ class CrossingMindsApiClient:
         :param list-str? filters: Item-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
         :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
         :param bool? exclude_rated_items: exclude rated items from response
-        :param str? algorithms: Algorithms whitelist. Format: '<algorithm_name>|<algorithm_name>|...'
         :param bool? skip_default_scenario: True to skip default scenario if any
         :returns: {
             'items_id': array of items IDs,
@@ -1055,8 +1051,6 @@ class CrossingMindsApiClient:
             data['exclude_rated_items'] = exclude_rated_items
         if scenario:
             data['scenario'] = scenario
-        if algorithms:
-            data['algorithms'] = algorithms
         if skip_default_scenario is not None:
             data['skip_default_scenario'] = skip_default_scenario
         resp = self.api.post(path=path, data=data)
@@ -1068,8 +1062,7 @@ class CrossingMindsApiClient:
     @require_login
     def get_reco_user_to_items(self, user_id, amt=None, cursor=None, scenario=None,
                                filters=None, reranking=None,
-                               exclude_rated_items=None, algorithms=None,
-                               skip_default_scenario=None):
+                               exclude_rated_items=None, skip_default_scenario=None):
         """
         Get items recommendations given a user ID.
 
@@ -1080,7 +1073,6 @@ class CrossingMindsApiClient:
         :param list-str? filters: Item-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
         :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
         :param bool? exclude_rated_items: exclude rated items from response
-        :param str? algorithms: Algorithms whitelist. Format: '<algorithm_name>|<algorithm_name>|...'
         :param bool? skip_default_scenario: True to skip default scenario if any
         :returns: {
             'items_id': array of items IDs,
@@ -1102,8 +1094,6 @@ class CrossingMindsApiClient:
             params['exclude_rated_items'] = exclude_rated_items
         if scenario:
             params['scenario'] = scenario
-        if algorithms:
-            params['algorithms'] = algorithms
         if skip_default_scenario is not None:
             params['skip_default_scenario'] = skip_default_scenario
         resp = self.api.get(path=path, params=params)
@@ -1113,13 +1103,12 @@ class CrossingMindsApiClient:
     # === Reco: User-to-item-property ===
 
     @require_login
-    def get_reco_user_to_item_properties(self, user_id, property_name: str, amt=None, algorithms=None):
+    def get_reco_user_to_item_properties(self, user_id, property_name: str, amt=None):
         """
         Recommends item-property values given a user ID
         :param bytes user_id:
         :param str property_name:
         :param int? amt: (default 16)  maximal number of property values to return for each property
-        :param str? algorithms: Algorithms whitelist. Format: '<algorithm_name>|<algorithm_name>|...'
         :raises: NotFoundError when data not found
         :raises: RequestError if property missing
         :return: {'properties': [n,] np.array, n<=amt}
@@ -1129,8 +1118,6 @@ class CrossingMindsApiClient:
         params = {}
         if amt:
             params['amt'] = amt
-        if algorithms:
-            params['algorithms'] = algorithms
         resp = self.api.get(path=path, params=params)
         return resp
 
@@ -1557,7 +1544,8 @@ class CrossingMindsApiClient:
             'filters?': [dict],
             'reranking?': [dict],
             'exclude_rated_items?': bool,
-            'algorithms?': str
+            'algorithms?': str,
+            'candidates_preselection?': dict,
         }
         """
         path = f'scenarios/{reco_type}/{name}/'
@@ -1577,6 +1565,7 @@ class CrossingMindsApiClient:
                     'reranking?': [dict],
                     'exclude_rated_items?': bool,
                     'algorithms?': str
+                    'candidates_preselection?': dict,
                 }
             ]
         }
@@ -1600,7 +1589,8 @@ class CrossingMindsApiClient:
                     'filters?': [dict],
                     'reranking?': [dict],
                     'exclude_rated_items?': bool,
-                    'algorithms?': str
+                    'algorithms?': str,
+                    'candidates_preselection?': dict,
                 },
                 'ab_test?': {
                     'id': str,
@@ -1633,6 +1623,10 @@ class CrossingMindsApiClient:
                             {'property_name"': 'director', 'op': 'diversity', 'weight': 0.8}
                     ],
                     'algorithms': 'algo1|algo2',
+                    'candidates_preselection': {
+                        'method': 'rated_items_nearest_neighbor',
+                        'params': {'nearest_neighbor_algorithms': ['algo3']}
+                    },
                     # only for reco types "profile_to_items", "session_to_items":
                     'exclude_rated_items': True,
                 }
