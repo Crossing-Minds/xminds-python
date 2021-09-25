@@ -1121,6 +1121,103 @@ class CrossingMindsApiClient:
         resp = self.api.get(path=path, params=params)
         return resp
 
+    # === Reco: Session-to-item with Context Items ===
+
+    @require_login
+    def get_reco_session_to_items_w_ctx_items(
+            self, context_items, ratings=None, user_properties=None, amt=None, cursor=None,
+            scenario=None, filters=None, reranking=None, exclude_rated_items=None,
+            skip_default_scenario=None):
+        """
+        Get items recommendations given the ratings of an anonymous session and context items ID.
+
+        :param array context_items: context items ID array with fields ['item_id': ID]
+        :param array? ratings: ratings array with fields ['item_id': ID, 'rating': float]
+        :param dict? user_properties: user properties {**property_name: property_value(s)}
+        :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
+        :param str? scenario: scenario name
+        :param list-str? filters: Item-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
+        :param bool? exclude_rated_items: exclude rated items from response
+        :param bool? skip_default_scenario: True to skip default scenario if any
+        :returns: {
+            'items_id': array of items IDs,
+            'next_cursor': str, pagination cursor to use in next request to get more items,
+        }
+        """
+        path = f'recommendation/context-items/sessions/items/'
+        data = {
+            'context_items': context_items,
+        }
+        if ratings is not None:
+            data['ratings'] = self._itemid2body(ratings)
+        if user_properties:
+            data['user_properties'] = user_properties
+        if amt:
+            data['amt'] = amt
+        if cursor:
+            data['cursor'] = cursor
+        if filters:
+            data['filters'] = filters
+        if reranking:
+            data['reranking'] = reranking
+        if exclude_rated_items is not None:
+            data['exclude_rated_items'] = exclude_rated_items
+        if scenario:
+            data['scenario'] = scenario
+        if skip_default_scenario is not None:
+            data['skip_default_scenario'] = skip_default_scenario
+        resp = self.api.post(path=path, data=data)
+        resp['items_id'] = self._body2itemid(resp['items_id'])
+        return resp
+
+    # === Reco: User-to-item with Context Items ===
+
+    @require_login
+    def get_reco_user_to_items_w_ctx_items(
+            self, context_items, user_id, amt=None, cursor=None, scenario=None, filters=None,
+            reranking=None, exclude_rated_items=None, skip_default_scenario=None):
+        """
+        Get items recommendations given a user ID and context items ID.
+
+        :param array context_items: context items ID array with fields ['item_id': ID]
+        :param ID user_id: user ID
+        :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
+        :param str? scenario: scenario's name
+        :param list-str? filters: Item-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
+        :param bool? exclude_rated_items: exclude rated items from response
+        :param bool? skip_default_scenario: True to skip default scenario if any
+        :returns: {
+            'items_id': array of items IDs,
+            'next_cursor': str, pagination cursor to use in next request to get more items,
+        }
+        """
+        user_id = self._userid2url(user_id)
+        path = f'recommendation/context-items/users/{user_id}/items/'
+        data = {
+            'context_items': context_items,
+        }
+        if amt:
+            data['amt'] = amt
+        if cursor:
+            data['cursor'] = cursor
+        if filters:
+            data['filters'] = filters
+        if reranking:
+            data['reranking'] = reranking
+        if exclude_rated_items is not None:
+            data['exclude_rated_items'] = exclude_rated_items
+        if scenario:
+            data['scenario'] = scenario
+        if skip_default_scenario is not None:
+            data['skip_default_scenario'] = skip_default_scenario
+        resp = self.api.post(path=path, data=data)
+        resp['items_id'] = self._body2itemid(resp['items_id'])
+        return resp
+
     # === User Ratings ===
 
     @require_login
