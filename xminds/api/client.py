@@ -1012,14 +1012,18 @@ class CrossingMindsApiClient:
     # === Reco: Session-to-item ===
 
     @require_login
-    def get_reco_session_to_items(self, ratings=None, user_properties=None,
+    def get_reco_session_to_items(self, ratings=None, interactions=None, user_properties=None,
                                   amt=None, cursor=None, scenario=None, filters=None,
                                   reranking=None, exclude_rated_items=None,
                                   skip_default_scenario=None):
         """
-        Get items recommendations given the ratings of an anonymous session.
+        Get items recommendations given the ratings or interactions of an anonymous session.
+        Ratings and interactions are mutually exclusive.
 
         :param array? ratings: ratings array with fields ['item_id': ID, 'rating': float]
+        :param array? interactions: interactions to calculate ratings from.
+            Timestamp is optional and defaults to now.
+            ['item_id': ID, 'interaction_type': 'O' 'timestamp?': float]
         :param dict? user_properties: user properties {**property_name: property_value(s)}
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
@@ -1053,6 +1057,8 @@ class CrossingMindsApiClient:
             data['scenario'] = scenario
         if skip_default_scenario is not None:
             data['skip_default_scenario'] = skip_default_scenario
+        if interactions is not None:
+            data['interactions'] = interactions
         resp = self.api.post(path=path, data=data)
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
