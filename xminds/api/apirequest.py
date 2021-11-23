@@ -17,6 +17,7 @@ import requests
 
 from .. import __version__
 from ..compat import PYV
+from ..lib.utils import retry
 from .exceptions import ServerError, XMindsError
 
 
@@ -61,6 +62,9 @@ class _BaseCrossingMindsApiRequest:
     def clear_jwt_token(self):
         self.session.headers.pop('Authorization', None)
 
+    # ConnectionError means the request didn't reach the server
+    # so even POST requests can be retried:
+    @retry(base=0.1, multiplier=4, max_retry=3, exception=requests.ConnectionError)  # wait up to ~2s
     def _request(self, method, path, params=None, data=None, timeout=None):
         url = f'{self.host}/{self.api_version}/{path}'
         if path and not path.endswith('/'):
