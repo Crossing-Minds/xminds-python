@@ -12,7 +12,7 @@ from ..ds.scaling import linearscaling
 from .arrays import first, lexsort_uint32_pair, to_structured
 
 
-def igroupby(ids, values, n=None, logging_prefix=None, assume_sorted=False,
+def igroupby(ids, values, n=None, logging_prefix=None, assume_sorted=False, stable=False,
              find_next_hint=512):
     """
     Efficiently converts two arrays representing a relation
@@ -30,22 +30,36 @@ def igroupby(ids, values, n=None, logging_prefix=None, assume_sorted=False,
     :param string? logging_prefix: prefix to include while logging progress.
         ``(default:`` Does not log``)``.
     :param bool? assume_sorted: whether ids is sorted. ``(default: False)``
+    :param bool? stable: when True, ensures that the relative order of values is preserved
+        (will slightly impact performance)
+        When False, nothing guarantees that the values in ``(id_i, values[ids == id_i])``
+        will be aligned on the input values (see example below)
+        The stable option is only used when `assume_sorted` is False (general case)
     :param int? find_next_hint: hint for find_next_lookup. ``(default: 512)``
     :generates: tuple(id:int, values_associated:``(m, *shape) array slice``)
 
     Example
     _______
-    >>> ids      = numpy.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 3, 3, 3])
-    >>> values   = numpy.array([0, 1, 2, 3, 4, 0, 2, 4, 6, 0, 4, 6])
+    >>> ids     = numpy.array([1, 1, 1, 1, 1, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3,  3,  3,  3])
+    >>> values  = numpy.array([0, 1, 2, 3, 4, 0, 2, 4, 6, 0, 4, 6, 5, 6, 7, 8, 9, 10, 11, 12])
     >>> gen = igroupby(ids, values)
     >>> next(gen)
-    (0, array([0, 1, 2, 3, 4]))
+    (0, array([0, 2, 4, 6]))
 
     >>> next(gen)
-    (1, array([0, 2, 4, 6]))
+    (1, array([0, 1, 2, 3, 4]))
 
     >>> next(gen)
-    (3, array([0, 4, 6]))
+    (3, array([10,  9,  8,  7,  0,  5,  6,  4, 11,  6, 12]))
+    # note how the values are not in the same order as they were in the input
+
+    with option `stable`:
+    >>> gen = igroupby(ids, values, stable=True)
+    >>> next(gen)
+    >>> next(gen)
+    >>> next(gen)
+    (3, array([0, 4, 6, 5, 6, 7, 8, 9, 10, 11, 12]))
+    # this time, the values are in the same order as they were in the input
 
     Example with strings as ids:
 
@@ -73,7 +87,11 @@ def igroupby(ids, values, n=None, logging_prefix=None, assume_sorted=False,
     if not assume_sorted:
         ids = ids[:n]
         values = values[:n]
-        asort = numpy.argsort(ids)
+        if stable:
+            # slower, but ensures relative order of values will be preserved
+            asort = numpy.argsort(ids, kind='stable')
+        else:
+            asort = numpy.argsort(ids)
         ids = ids[asort]
         values = values[asort]
     # init
