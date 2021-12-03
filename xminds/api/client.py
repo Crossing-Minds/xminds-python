@@ -1644,11 +1644,43 @@ class CrossingMindsApiClient:
         {
             'name': str,
             'reco_type': str
-            'filters?': [dict],
-            'reranking?': [dict],
-            'exclude_rated_items?': bool,
-            'algorithms?': str,
-            'candidates_preselection?': dict,
+            'scenario': {
+                'scenario_type': 'case',
+                'case': {
+                    'filters?': [dict],
+                    'reranking?': [dict],
+                    'exclude_rated_items?': bool,
+                    'algorithms?': str,
+                    'candidates_preselection?': dict,
+                }
+            }
+        }
+        or
+        {
+            'name': str,
+            'reco_type': str
+            'scenario': {
+                'scenario_type': 'ab_test',
+                'ab_test': {
+                    'id': str,
+                    'scenario_a': str,
+                    'scenario_b': str
+                }
+            }
+        }
+        or
+        {
+            'name': str,
+            'reco_type': str
+            'scenario': {
+                'scenario_type': 'condition',
+                'condition': {
+                    'condition_type': str,
+                    'if': dict,
+                    'then': str,
+                    'else': str
+                }
+            }
         }
         """
         path = f'scenarios/{reco_type}/{name}/'
@@ -1664,11 +1696,10 @@ class CrossingMindsApiClient:
                 {
                     'name': str,
                     'reco_type': str
-                    'filters?': [dict],
-                    'reranking?': [dict],
-                    'exclude_rated_items?': bool,
-                    'algorithms?': str
-                    'candidates_preselection?': dict,
+                    'scenario': {
+                        'scenario_type': str,
+                        'case?ab_test?condition?': dict
+                    }
                 }
             ]
         }
@@ -1680,7 +1711,8 @@ class CrossingMindsApiClient:
     def create_scenario(self, reco_type, name, scenario):
         """
         Create a new scenario.
-        A scenario should take this form:
+        A scenario should take the following form, with only one of the keys
+        among case|condition|ab_test, corresponding to the scenario type:
 
         :param str reco_type: accepted values
             "item_to_items", "profile_to_items", "session_to_items"
@@ -1714,7 +1746,7 @@ class CrossingMindsApiClient:
         _______
         api.create_scenario(
             reco_type='profile_to_items',
-            name='my_scenario_name',
+            name='my_case_scenario',
             scenario = {
                 'scenario_type': 'case',
                 'case': {
@@ -1740,13 +1772,33 @@ class CrossingMindsApiClient:
         _______
         api.create_scenario(
             reco_type='profile_to_items',
-            name='my_conditional_scenario',
+            name='my_ab_test_scenario',
             scenario = {
                 'scenario_type': 'ab_test',
                 'ab_test': {
-                    'if': 'my_ab_test_id',
+                    'id': 'my_ab_test_id',
                     'scenario_a': 'scenar1',
                     'scenario_b': 'scenar2'
+                }
+            }
+        )
+
+        Example
+        _______
+        api.create_scenario(
+            reco_type='profile_to_items',
+            name='my_condition_scenario',
+            scenario = {
+                'scenario_type': 'condition',
+                'condition': {
+                    'condition_type': 'user_function',
+                    'if': {
+                        'function_name': 'n_ratings',
+                        'op': 'lt',
+                        'value': 10
+                    },
+                    'then': 'scenar1',
+                    'else': 'scenar2'
                 }
             }
         )
