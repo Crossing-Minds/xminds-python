@@ -515,6 +515,34 @@ class CrossingMindsApiClient:
         return resp
 
     @require_login
+    def list_users(self, users_id):
+        """
+        Get multiple users given their IDs.
+        The users in the response are not aligned with the input.
+        In particular this endpoint does not raise NotFoundError if any user in missing.
+        Instead, the missing users are simply not present in the response.
+
+        :param ID-array users_id: users IDs
+        :returns: {
+            'users': array with fields ['id': ID, *<property_name: value_type>]
+                contains only the non-repeated values,
+            'users_m2m': dict of arrays for repeated values:
+                {
+                    *<repeated_property_name: {
+                        'name': str,
+                        'array': array with fields ['user_index': uint32, 'value_id': value_type],
+                    }>
+                }
+        }
+        """
+        users_id = self._userid2body(users_id)
+        path = f'users-bulk/list/'
+        data = {'users_id': users_id}
+        resp = self.api.post(path=path, data=data)
+        resp['users'] = self._body2itemid(resp['users'])
+        return resp
+
+    @require_login
     def list_users_paginated(self, amt=None, cursor=None):
         """
         Get multiple users by page.
