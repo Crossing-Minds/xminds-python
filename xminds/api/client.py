@@ -140,6 +140,34 @@ class CrossingMindsApiClient:
         path = f'organizations/accounts/'
         return self.api.get(path=path)
 
+    @require_login
+    def delete_individual_account(self, email):
+        """
+        Delete an individual account
+
+        :param str email:
+        :raises: NotFoundError
+        """
+        path = 'accounts/individual/'
+        data = {
+            'email': email,
+        }
+        return self.api.delete(path=path, data=data)
+
+    @require_login
+    def delete_service_account(self, name):
+        """
+        Delete a service account
+
+        :param str name: Service name
+        :raises: NotFoundError
+        """
+        path = 'accounts/service/'
+        data = {
+            'name': name,
+        }
+        return self.api.delete(path=path, data=data)
+
     # === Login ===
 
     def login_individual(self, email, password, db_id, frontend_user_id=None):
