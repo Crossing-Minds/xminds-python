@@ -83,7 +83,7 @@ def to_structured(arrays):
     else:
         assert isinstance(arrays, list), (
             'arrays must be a dict or a list, not {}'.format(type(arrays)))
-    all_n_rows = {len(a) for _, a, *_ in arrays if hasattr(a, '__len__')}
+    all_n_rows = {len(a) for _, a, *_ in arrays if numpy.asarray(a).shape}
     if len(all_n_rows) > 1:
         raise ValueError(
             'all arrays must have the same shape[0], got: {}'.format(all_n_rows))
