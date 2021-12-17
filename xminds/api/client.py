@@ -1764,9 +1764,11 @@ class CrossingMindsApiClient:
         return self.api.get(path=path)
 
     @require_login
-    def create_scenario(self, reco_type, name, scenario):
+    def create_or_replace_scenario(self, reco_type, name, scenario):
         """
-        Create a new scenario.
+        Create a new scenario or replace an existing one.
+        Only `case` scenarios can be replaced, to avoid circular referrencing.
+
         A scenario should take the following form, with only one of the keys
         among case|condition|ab_test, corresponding to the scenario type:
 
@@ -1800,7 +1802,7 @@ class CrossingMindsApiClient:
 
         Example
         _______
-        api.create_scenario(
+        api.create_or_replace_scenario(
             reco_type='profile_to_items',
             name='my_case_scenario',
             scenario = {
@@ -1826,7 +1828,7 @@ class CrossingMindsApiClient:
 
         Example
         _______
-        api.create_scenario(
+        api.create_or_replace_scenario(
             reco_type='profile_to_items',
             name='my_ab_test_scenario',
             scenario = {
@@ -1841,7 +1843,7 @@ class CrossingMindsApiClient:
 
         Example
         _______
-        api.create_scenario(
+        api.create_or_replace_scenario(
             reco_type='profile_to_items',
             name='my_condition_scenario',
             scenario = {
