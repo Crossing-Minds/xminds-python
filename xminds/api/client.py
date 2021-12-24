@@ -886,11 +886,12 @@ class CrossingMindsApiClient:
         return resp
 
     @require_login
-    def create_or_update_item(self, item):
+    def create_or_update_item(self, item, wait_for_completion=None):
         """
         Create a new item, or update it if the ID already exists.
 
         :param dict item: item ID and properties {'item_id': ID, *<property_name: property_value>}
+        :param bool? wait_for_completion: (default: true)
         """
         item = dict(item)
         item_id = self._itemid2url(item.pop('item_id'))
@@ -898,6 +899,8 @@ class CrossingMindsApiClient:
         data = {
             'item': item,
         }
+        if wait_for_completion is not None:
+            data['wait_for_completion'] = wait_for_completion
         return self.api.put(path=path, data=data)
 
     @require_login
@@ -935,7 +938,7 @@ class CrossingMindsApiClient:
 
         :param dict item: item ID and properties {'item_id': ID, *<property_name: property_value>}
         :param bool? create_if_missing: control whether an error should be returned or a new item
-        should be created when the ``item_id`` does not already exist. (default: false)
+            should be created when the ``item_id`` does not already exist. (default: false)
         """
         item = dict(item)
         item_id = self._itemid2url(item.pop('item_id'))
@@ -949,7 +952,7 @@ class CrossingMindsApiClient:
 
     @require_login
     def partial_update_items_bulk(self, items, items_m2m=None, create_if_missing=None,
-                                  chunk_size=(1 << 10)):
+                                  chunk_size=(1 << 10), wait_for_completion=None):
         """
         Partially update some properties of many items.
 
@@ -965,11 +968,14 @@ class CrossingMindsApiClient:
         :param bool? create_if_missing: control whether an error should be returned or a new item
         should be created when the ``item_id`` does not already exist. (default: false)
         :param int? chunk_size: split the requests in chunks of this size (default: 1K)
+        :param bool? wait_for_completion: (default: True)
         """
         path = f'items-bulk/'
         data = {}
         if create_if_missing is not None:
             data['create_if_missing'] = create_if_missing
+        if wait_for_completion is not None:
+            data['wait_for_completion'] = wait_for_completion
         for items_chunk, items_m2m_chunk in self._chunk_items(items, items_m2m, chunk_size):
             data['items'] = items_chunk
             data['items_m2m'] = items_m2m_chunk
