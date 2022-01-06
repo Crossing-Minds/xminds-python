@@ -84,7 +84,7 @@ class _BaseCrossingMindsApiRequest:
             exc_payload = self._parse_response(resp, fallback=True)
             if exc_payload:
                 logging.error(exc_payload)
-            raise ServerError()
+            raise ServerError(exc_payload)
         elif resp.status_code >= 400:
             data = self._parse_response(resp, fallback=True)
             try:
