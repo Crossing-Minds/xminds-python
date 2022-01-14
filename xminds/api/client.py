@@ -1036,7 +1036,7 @@ class CrossingMindsApiClient:
     @require_login
     def get_reco_item_to_items(self, item_id, amt=None, cursor=None,
                                scenario=None, filters=None, reranking=None,
-                               skip_default_scenario=None):
+                               skip_default_scenario=None, user_id=None):
         """
         Get similar items.
 
@@ -1047,6 +1047,8 @@ class CrossingMindsApiClient:
         :param list-str? filters: Item-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
         :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
         :param bool? skip_default_scenario: True to skip default scenario if any
+        :param ID? user_id: user ID. Only used in the context of an A/B test scenario to select the group A or B
+            and keep track of the respective group in analytics, NOT used to personalize recommendations
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
@@ -1067,6 +1069,8 @@ class CrossingMindsApiClient:
             params['scenario'] = scenario
         if skip_default_scenario is not None:
             params['skip_default_scenario'] = skip_default_scenario
+        if user_id:
+            params['user_id'] = user_id
         resp = self.api.get(path=path, params=params)
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
@@ -1077,7 +1081,7 @@ class CrossingMindsApiClient:
     def get_reco_session_to_items(self, ratings=None, interactions=None, user_properties=None,
                                   amt=None, cursor=None, scenario=None, filters=None,
                                   reranking=None, exclude_rated_items=None,
-                                  skip_default_scenario=None):
+                                  skip_default_scenario=None, user_id=None):
         """
         Get items recommendations given the ratings or interactions of an anonymous session.
         Ratings and interactions are mutually exclusive.
@@ -1094,6 +1098,8 @@ class CrossingMindsApiClient:
         :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
         :param bool? exclude_rated_items: exclude rated items from response
         :param bool? skip_default_scenario: True to skip default scenario if any
+        :param ID? user_id: user ID. Only used in the context of an A/B test scenario to select the group A or B
+            and keep track of the respective group in analytics, NOT used to personalize recommendations
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
@@ -1121,6 +1127,8 @@ class CrossingMindsApiClient:
             data['skip_default_scenario'] = skip_default_scenario
         if interactions is not None:
             data['interactions'] = interactions
+        if user_id:
+            data['user_id'] = user_id
         resp = self.api.post(path=path, data=data)
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
