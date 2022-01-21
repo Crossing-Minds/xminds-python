@@ -152,7 +152,7 @@ def ufunc_group_by_idx(idx, values, ufunc, init, minlength=None):
     >>> ufunc_group_by_idx(idx, values, numpy.add, 0)
     array([ 10, 12, -0,  10])
     """
-    length = max(idx.max() + 1, minlength or 0)
+    length = max(idx.max() + 1 if idx.size else 0, minlength or 0)
     out = numpy.full(length, init)
     ufunc.at(out, idx, values)
     return out
