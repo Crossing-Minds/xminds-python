@@ -1681,7 +1681,7 @@ class CrossingMindsApiClient:
             i += 1
         raise RuntimeError(f'task {task_name} not done before {timeout}s. Last response: {task}')
 
-    # === Trained Models ===
+    # === Pre-trained Machine Learning ===
 
     @require_login
     def list_trained_models(self):
@@ -1698,7 +1698,7 @@ class CrossingMindsApiClient:
             ]
         }
         """
-        path = f'trained-models/'
+        path = f'pretrained-ml/trained-models/'
         return self.api.get(path=path)
 
     # === Scenarios ===
