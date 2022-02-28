@@ -1062,9 +1062,9 @@ class CrossingMindsApiClient:
         if cursor:
             params['cursor'] = cursor
         if filters:
-            params['filters'] = filters
+            params['filters'] = self._clean_filters_to_urlsafe(filters)
         if reranking:
-            params['reranking'] = reranking
+            params['reranking'] = self._clean_reranking_to_urlsafe(reranking)
         if scenario:
             params['scenario'] = scenario
         if skip_default_scenario is not None:
@@ -1163,9 +1163,9 @@ class CrossingMindsApiClient:
         if cursor:
             params['cursor'] = cursor
         if filters:
-            params['filters'] = filters
+            params['filters'] = self._clean_filters_to_urlsafe(filters)
         if reranking:
-            params['reranking'] = reranking
+            params['reranking'] = self._clean_reranking_to_urlsafe(reranking)
         if exclude_rated_items is not None:
             params['exclude_rated_items'] = exclude_rated_items
         if scenario:
@@ -2018,3 +2018,76 @@ class CrossingMindsApiClient:
         if latest_task['status'] == 'FAILED':
             raise ServerError({'error': latest_task.get('error', default_failed)})
         return latest_task['status']
+
+    @staticmethod
+    def _clean_filters_to_urlsafe(filters):
+        """
+        Cleans item-property filters for GET recommendation endpoints
+        Filter format: '<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>'
+
+        :param filters: list-of-(dict-or-str)
+        :return: list-of-str
+
+        Example:
+
+        >>> CrossingMindsApiClient._clean_filters_to_urlsafe([
+        ...     {'property_name': 'test', 'op': 'gt', 'value': 1.0},
+        ...     {'property_name': 'test', 'op': 'notempty'}
+        ... ])
+        ['test:gt:1.0', 'test:notempty']
+        """
+        _filters = []
+        for f in filters:
+            if isinstance(f, str):
+                _f = f
+            elif isinstance(f, dict):
+                _f = f"{f['property_name']}:{f['op']}"
+                if 'value' in f:
+                    v = f['value']
+                    if isinstance(v, dict):
+                        raise TypeError('Advanced filtering features are reserved to scenarios')
+                    _f += f':{v}'
+            else:
+                raise TypeError(
+                    f'only strings and dict are allowed but one is a {type(f)}')
+            _filters.append(_f)
+        return _filters
+
+    @staticmethod
+    def _clean_reranking_to_urlsafe(reranking):
+        """
+        Cleans rerankings for GET recommendation endpoints
+        Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTION_TYPE>:<OPTION_VALUE>']
+
+        :param reranking: list-of-(dict-or-str)
+        :return: list-of-str.
+
+        Example:
+
+        >>> CrossingMindsApiClient._clean_reranking_to_urlsafe([
+        ...     {'property_name': 'test', 'op': 'diversity', 'weight': 1, 'options': {'a': 2, 'b': 3}},
+        ...     {'property_name': 'test', 'op': 'diversity', 'options': {'a': 1}}
+        ... ])
+        ['test:diversity:1:a:2:b:3', 'test:diversity::a:1']
+        """
+        _reranking = []
+        for r in reranking:
+            if isinstance(r, str):
+                _r = r
+            elif isinstance(r, dict):
+                _r = f"{r['property_name']}:{r['op']}:"
+                weight = r.get('weight')
+                if weight is not None:
+                    _r += f"{weight}"
+                options = r.get('options')
+                if options is not None:
+                    s = []
+                    for k, v in options.items():
+                        assert not isinstance(v, dict)
+                        s.append(f'{k}:{v}')
+                    _r += ':' + ':'.join(s)
+            else:
+                raise TypeError(
+                    f'only strings and dict are allowed but one is a {type(r)}')
+            _reranking.append(_r)
+        return _reranking
