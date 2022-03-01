@@ -1481,18 +1481,26 @@ class CrossingMindsApiClient:
         return
 
     @require_login
-    def list_interactions(self, amt=None, cursor=None):
+    def list_interactions(
+            self, amt=None, cursor=None,
+            start_timestamp=None, end_timestamp=None
+    ):
         """
         List the interactions of one database
 
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
+        :param float? start_timestamp: When provided, only returns interactions
+            timestamped after this value
+        :param float? end_timestamp: When provided, only returns interactions
+            timestamped before this value
         :returns: {
             'has_next': bool,
             'next_cursor': str,
             'interactions': array with fields
-                ['item_id': ID, 'user_id': ID, 'intraction_type': str, 'timestamp': float]
+                ['item_id': ID, 'user_id': ID, 'interaction_type': str, 'timestamp': float]
         }
+        :raises: RequestError if provided timeframe is invalid
         """
         path = f'interactions-bulk/'
         params = {}
@@ -1500,6 +1508,10 @@ class CrossingMindsApiClient:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
+        if start_timestamp:
+            params['start_timestamp'] = start_timestamp
+        if end_timestamp:
+            params['end_timestamp'] = end_timestamp
         resp = self.api.get(path=path, params=params)
         resp['interactions'] = self._body2userid(self._body2itemid(resp['interactions']))
         return resp
