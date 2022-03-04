@@ -74,6 +74,31 @@ class CrossingMindsApiClient:
         return self.api.post(path=path, data=data)
 
     @require_login
+    def partial_update_individual_account(
+        self, email, password=None, first_name=None, last_name=None):
+        """
+        Update the password or other editable property of an individual account,
+        identified by an email.
+        Editable properties not provided will not be modified.
+
+        :param str email:
+        :param str? password:
+        :param str? first_name:
+        :param str? last_name:
+        """
+        path = f'accounts/individual/'
+        data = {
+            'email': email
+        }
+        if password:
+            data['password'] = password
+        if first_name:
+            data['first_name'] = first_name,
+        if last_name:
+            data['last_name'] = last_name,
+        return self.api.patch(path=path, data=data)
+
+    @require_login
     def create_service_account(self, name, password, role='frontend'):
         """
         Create a new service account
@@ -90,6 +115,23 @@ class CrossingMindsApiClient:
             'role': role,
         }
         return self.api.post(path=path, data=data)
+
+    @require_login
+    def partial_update_service_account(self, name, password):
+        """
+        Update the password or other editable property of an existing service account,
+        identified by a service name.
+        Editable properties not provided will not be modified.
+
+        :param str name:
+        :param str password:
+        """
+        path = f'accounts/service/'
+        data = {
+            'name': name,
+            'password': password
+        }
+        return self.api.patch(path=path, data=data)
 
     def resend_verification_code(self, email):
         """
@@ -1179,12 +1221,15 @@ class CrossingMindsApiClient:
     # === Reco: User-to-item-property ===
 
     @require_login
-    def get_reco_user_to_item_properties(self, user_id, property_name: str, amt=None):
+    def get_reco_user_to_item_properties(self, user_id, property_name: str, amt=None,
+                                         skip_default_scenario=None, scenario=None):
         """
         Recommends item-property values given a user ID
         :param bytes user_id:
         :param str property_name:
         :param int? amt: (default 16)  maximal number of property values to return for each property
+        :param bool? skip_default_scenario: Specify whether default scenario should by applied or skipped
+        :param str? scenario:
         :raises: NotFoundError when data not found
         :raises: RequestError if property missing
         :return: {'properties': [n,] np.array, n<=amt}
@@ -1194,6 +1239,10 @@ class CrossingMindsApiClient:
         params = {}
         if amt:
             params['amt'] = amt
+        if skip_default_scenario is not None:
+            params['skip_default_scenario'] = skip_default_scenario
+        if scenario:
+            params['scenario'] = scenario
         resp = self.api.get(path=path, params=params)
         return resp
 
@@ -1479,6 +1528,23 @@ class CrossingMindsApiClient:
                 time.sleep(sleep)
 
         return
+
+    @require_login
+    def create_user_interactions_bulk(self, user_id, interactions):
+        """
+        Create a small bulk of interactions for a single user and many items.
+        Inferred ratings will be created or updated for all tuples (user_id, item_id)
+
+        :param ID user_id: user ID
+        :param array interactions: interactions array with fields:
+            ['item_id': ID, 'interaction_type': str, 'timestamp': float]
+        :param int? chunk_size: split the requests in chunks of this size (default: 16K)
+        """
+        path = f'users/{user_id}/interactions-bulk/'
+        data = {
+            'interactions': interactions,
+        }
+        return self.api.post(path=path, data=data, timeout=10)
 
     @require_login
     def list_interactions(
@@ -1889,7 +1955,7 @@ class CrossingMindsApiClient:
         """
         path = f'scenarios/{reco_type}/{name}/'
         data = scenario
-        self.api.put(path=path, data=data)
+        return self.api.put(path=path, data=data)
 
     @require_login
     def delete_scenario(self, reco_type, name):
@@ -1982,6 +2048,8 @@ class CrossingMindsApiClient:
         d_type = self._database[f'{field}_id_type']
         if not d_type.startswith(('bytes', 'uuid', 'hex', 'urlsafe')):
             pass
+        elif isinstance(data, numpy.ndarray):
+            raise NotImplementedError('Numpy array type is not supported.')
         elif not isinstance(data, list):
             data = cast_func(data, d_type)
         elif all(isinstance(d, dict) for d in data):
