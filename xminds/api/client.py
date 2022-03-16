@@ -1117,6 +1117,26 @@ class CrossingMindsApiClient:
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
 
+    @require_login
+    def get_precomputed_reco_item_to_items(self, item_id, table):
+        """
+        Get similar items, from a file of precomputed recommendations (stored as a ``table``).
+
+        The table must be with ``LOCAL`` connection, have no compressions and have resource equal to
+        ``ITEM_TO_ITEMS_RECO``.
+        The table format must be indexed raw data file.
+
+        :param ID item_id: item ID
+        :param str table: table name
+        :returns: {
+            'items_id': array of items IDs,
+        }
+        """
+        item_id = self._itemid2url(item_id)
+        path = f'recommendation/precomputed/items/{item_id}/items/'
+        params = {'table': table}
+        return self.api.get(path=path, params=params)
+
     # === Reco: Session-to-item ===
 
     @require_login
@@ -1217,6 +1237,27 @@ class CrossingMindsApiClient:
         resp = self.api.get(path=path, params=params)
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
+
+    @require_login
+    def get_precomputed_reco_user_to_items(self, user_id, table):
+        """
+        Get item recommendations given a user profile, from a file of precomputed recommendations
+        (stored as a ``table``).
+
+        The table must be with ``LOCAL`` connection, have no compressions and have resource equal to
+        ``USER_TO_ITEMS_RECO``.
+        The table format must be indexed raw data file.
+
+        :param ID user_id: user ID
+        :param str table: table name
+        :returns: {
+            'items_id': array of items IDs
+        }
+        """
+        user_id = self._userid2url(user_id)
+        path = f'recommendation/precomputed/users/{user_id}/items/'
+        params = {'table': table}
+        return self.api.get(path=path, params=params)
 
     # === Reco: User-to-item-property ===
 
