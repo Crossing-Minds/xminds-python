@@ -1118,7 +1118,8 @@ class CrossingMindsApiClient:
         return resp
 
     @require_login
-    def get_precomputed_reco_item_to_items(self, item_id, table):
+    def get_precomputed_reco_item_to_items(self, item_id, table=None, scenario=None,
+                                           skip_default_scenario=None):
         """
         Get similar items, from a file of precomputed recommendations (stored as a ``table``).
 
@@ -1127,14 +1128,22 @@ class CrossingMindsApiClient:
         The table format must be indexed raw data file.
 
         :param ID item_id: item ID
-        :param str table: table name
+        :param str? table: table name
+        :param str? scenario: scenario name
+        :param bool? skip_default_scenario: Specify whether default scenario should by applied or skipped
         :returns: {
             'items_id': array of items IDs,
         }
         """
         item_id = self._itemid2url(item_id)
         path = f'recommendation/precomputed/items/{item_id}/items/'
-        params = {'table': table}
+        params = {}
+        if table:
+            params['table'] = table
+        if scenario:
+            params['scenario'] = scenario
+        if skip_default_scenario is not None:
+            params['skip_default_scenario'] = skip_default_scenario
         return self.api.get(path=path, params=params)
 
     # === Reco: Session-to-item ===
@@ -1239,7 +1248,8 @@ class CrossingMindsApiClient:
         return resp
 
     @require_login
-    def get_precomputed_reco_user_to_items(self, user_id, table):
+    def get_precomputed_reco_user_to_items(self, user_id, table=None, scenario=None,
+                                           skip_default_scenario=None):
         """
         Get item recommendations given a user profile, from a file of precomputed recommendations
         (stored as a ``table``).
@@ -1249,14 +1259,22 @@ class CrossingMindsApiClient:
         The table format must be indexed raw data file.
 
         :param ID user_id: user ID
-        :param str table: table name
+        :param str? table: table name
+        :param str? scenario: scenario name
+        :param bool? skip_default_scenario: Specify whether default scenario should by applied or skipped
         :returns: {
             'items_id': array of items IDs
         }
         """
         user_id = self._userid2url(user_id)
         path = f'recommendation/precomputed/users/{user_id}/items/'
-        params = {'table': table}
+        params = {}
+        if table:
+            params['table'] = table
+        if scenario:
+            params['scenario'] = scenario
+        if skip_default_scenario is not None:
+            params['skip_default_scenario'] = skip_default_scenario
         return self.api.get(path=path, params=params)
 
     # === Reco: User-to-item-property ===
