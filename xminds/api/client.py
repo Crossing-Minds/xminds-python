@@ -1280,14 +1280,17 @@ class CrossingMindsApiClient:
     # === Reco: User-to-item-property ===
 
     @require_login
-    def get_reco_user_to_item_properties(self, user_id, property_name: str, amt=None,
-                                         skip_default_scenario=None, scenario=None):
+    def get_reco_user_to_item_properties(
+            self, user_id, property_name: str, amt=None,
+            skip_default_scenario=None, filters=None, scenario=None):
         """
         Recommends item-property values given a user ID
         :param bytes user_id:
         :param str property_name:
         :param int? amt: (default 16)  maximal number of property values to return for each property
         :param bool? skip_default_scenario: Specify whether default scenario should by applied or skipped
+        :param list-str? filters: filters on intermediate items.
+            Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
         :param str? scenario:
         :raises: NotFoundError when data not found
         :raises: RequestError if property missing
@@ -1302,6 +1305,8 @@ class CrossingMindsApiClient:
             params['skip_default_scenario'] = skip_default_scenario
         if scenario:
             params['scenario'] = scenario
+        if filters:
+            params['filters'] = self._clean_filters_to_urlsafe(filters)
         resp = self.api.get(path=path, params=params)
         return resp
 
