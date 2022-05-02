@@ -1281,13 +1281,13 @@ class CrossingMindsApiClient:
 
     @require_login
     def get_reco_user_to_item_properties(
-            self, user_id, property_name: str, amt=None,
+            self, user_id, item_property_name: str, amt=None,
             skip_default_scenario=None, filters=None, scenario=None):
         """
         Recommends item-property values given a user ID
         :param bytes user_id:
-        :param str property_name:
-        :param int? amt: (default 16)  maximal number of property values to return for each property
+        :param str item_property_name:
+        :param int? amt: (default 16)  maximal number of values to return from property `item_property_name`
         :param bool? skip_default_scenario: Specify whether default scenario should by applied or skipped
         :param list-str? filters: filters on intermediate items.
             Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
@@ -1297,7 +1297,7 @@ class CrossingMindsApiClient:
         :return: {'properties': [n,] np.array, n<=amt}
         """
         user_id = self._userid2url(user_id)
-        path = f'recommendation/users/{user_id}/items-properties/{property_name}/'
+        path = f'recommendation/users/{user_id}/items-properties/{item_property_name}/'
         params = {}
         if amt:
             params['amt'] = amt
@@ -1308,6 +1308,54 @@ class CrossingMindsApiClient:
         if filters:
             params['filters'] = self._clean_filters_to_urlsafe(filters)
         resp = self.api.get(path=path, params=params)
+        return resp
+
+    # === Reco: Session-to-item-property ===
+
+    @require_login
+    def get_reco_session_to_item_properties(
+            self, item_property_name: str,
+            ratings=None,
+            interactions=None,
+            user_properties: dict = None,
+            user_id=None, amt=None,
+            skip_default_scenario=None, filters=None, scenario=None):
+        """
+        Recommends item-property values given a session
+        :param str item_property_name:
+        :param bytes? user_id: only used in scenario logic to select business rules
+            in the context of an A/B test
+        :param numpy.array[item_id,rating]? ratings:
+        :param numpy.array[item_id,interaction_type,timestamp]? interactions:
+        :param dict? user_properties:
+        :param int? amt: (default 16) maximal number of values to return from property `item_property_name`
+        :param bool? skip_default_scenario: Specify whether default scenario should by applied or skipped
+        :param list-str? filters: filters on intermediate items.
+            Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param str? scenario:
+        :raises: NotFoundError when data not found
+        :raises: RequestError if property missing
+        :return: {'properties': [n,] np.array, n<=amt}
+        """
+        path = f'recommendation/sessions/items-properties/{item_property_name}/'
+        data = {}
+        if user_id:
+            data['user_id'] = user_id
+        if amt:
+            data['amt'] = amt
+        if skip_default_scenario is not None:
+            data['skip_default_scenario'] = skip_default_scenario
+        if scenario:
+            data['scenario'] = scenario
+        if filters:
+            data['filters'] = self._clean_filters_to_urlsafe(filters)
+        if ratings is not None:
+            data['ratings'] = ratings
+        if interactions is not None:
+            data['interactions'] = interactions
+        if user_properties:
+            data['user_properties'] = user_properties
+        resp = self.api.post(path=path, data=data)
         return resp
 
     # === Reco: Session-to-item with Context Items ===
