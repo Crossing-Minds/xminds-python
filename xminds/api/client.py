@@ -237,7 +237,12 @@ class CrossingMindsApiClient:
             'password': password,
             'db_id': db_id,
         }
-        return self._login(path, data, frontend_user_id)
+        if frontend_user_id is not None:
+            # cannot use `_userid2body` since we are not logged in yet
+            if isinstance(frontend_user_id, bytes) and self.b64_encode_bytes:
+                frontend_user_id = self._b64_encode(frontend_user_id)
+            data['frontend_user_id'] = frontend_user_id
+        return self._login(path, data)
 
     def login_service(self, name, password, db_id, frontend_user_id=None):
         """
@@ -264,7 +269,12 @@ class CrossingMindsApiClient:
             'password': password,
             'db_id': db_id,
         }
-        return self._login(path, data, frontend_user_id)
+        if frontend_user_id is not None:
+            # cannot use `_userid2body` since we are not logged in yet
+            if isinstance(frontend_user_id, bytes) and self.b64_encode_bytes:
+                frontend_user_id = self._b64_encode(frontend_user_id)
+            data['frontend_user_id'] = frontend_user_id
+        return self._login(path, data)
 
     def login_root(self, email, password):
         """
@@ -309,11 +319,9 @@ class CrossingMindsApiClient:
         data = {
             'refresh_token': refresh_token
         }
-        return self._login(path, data, None)
+        return self._login(path, data)
 
-    def _login(self, path, data, frontend_user_id):
-        if frontend_user_id:
-            data['frontend_user_id'] = self._userid2body(frontend_user_id)
+    def _login(self, path, data):
         resp = self.api.post(path=path, data=data)
         jwt_token = resp['token']
         self.set_jwt_token(jwt_token)
@@ -2163,26 +2171,27 @@ class CrossingMindsApiClient:
             return data
         d_type = self._database[f'{field}_id_type']
         if not d_type.startswith(('bytes', 'uuid', 'hex', 'urlsafe')):
-            pass
-        elif isinstance(data, numpy.ndarray):
-            raise NotImplementedError('Numpy array type is not supported.')
-        elif not isinstance(data, list):
-            data = cast_func(data, d_type)
-        elif all(isinstance(d, dict) for d in data):
-            data = [{**row, f'{field}_id': cast_func(row[f'{field}_id'], d_type)} for row in data]
-        else:
-            data = [cast_func(row, d_type) for row in data]
-        return data
+            return data
+        if isinstance(data, numpy.ndarray):
+            if data.dtype.names:
+                data = [dict(zip(data.dtype.names, row)) for row in data.tolist()]
+            else:
+                data = data.tolist()
+        if not isinstance(data, list):
+            return cast_func(data, d_type)
+        if all(isinstance(d, dict) for d in data):
+            return [{**row, f'{field}_id': cast_func(row[f'{field}_id'], d_type)} for row in data]
+        return [cast_func(row, d_type) for row in data]
 
     def _id2body(self, data, d_type):
         if d_type.startswith(('uuid', 'hex', 'urlsafe')):
-            return data.decode('ascii')
+            return data.decode('ascii') if isinstance(data, bytes) else data
         else:  # Bytes
             return self._b64_encode(data)
 
     def _body2id(self, data, d_type):
         if d_type.startswith(('uuid', 'hex', 'urlsafe')):
-            return data.encode('ascii')
+            return data  # leave as str, do not encode
         else:  # Bytes
             return self._b64_decode(data.encode('ascii'))
 
