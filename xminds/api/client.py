@@ -75,7 +75,7 @@ class CrossingMindsApiClient:
 
     @require_login
     def partial_update_individual_account(
-        self, email, password=None, first_name=None, last_name=None):
+            self, email, password=None, first_name=None, last_name=None):
         """
         Update the password or other editable property of an individual account,
         identified by an email.
@@ -370,7 +370,8 @@ class CrossingMindsApiClient:
     # === Database ===
 
     @require_login
-    def create_database(self, name, description, item_id_type, user_id_type):
+    def create_database(self, name, description, item_id_type, user_id_type,
+                        item_filter_cache_expiration=None):
         """
         Create a new database
 
@@ -378,6 +379,7 @@ class CrossingMindsApiClient:
         :param str description:
         :param str item_id_type: Item ID type
         :param str user_id_type: User ID type
+        :param float? item_filter_cache_expiration: Refresh cache time of items filters (in seconds)
         """
         path = f'databases/'
         data = {
@@ -386,6 +388,8 @@ class CrossingMindsApiClient:
             'item_id_type': item_id_type,
             'user_id_type': user_id_type,
         }
+        if item_filter_cache_expiration:
+            data['item_filter_cache_expiration'] = item_filter_cache_expiration
         return self.api.post(path=path, data=data)
 
     @require_login
@@ -404,7 +408,7 @@ class CrossingMindsApiClient:
                     'name': str,
                     'description': str,
                     'item_id_type': str,
-                    'user_id_type': str
+                    'user_id_type': str,
                 },
             ]
         }
@@ -662,7 +666,7 @@ class CrossingMindsApiClient:
 
     @require_login
     def create_or_update_users_bulk(self, users, users_m2m=None, wait_for_completion=None,
-                                    chunk_size=(1<<10)):
+                                    chunk_size=(1 << 10)):
         """
         Create many users in bulk, or update the ones for which the id already exist.
 
@@ -947,7 +951,7 @@ class CrossingMindsApiClient:
 
     @require_login
     def create_or_update_items_bulk(self, items, items_m2m=None, wait_for_completion=None,
-                                    chunk_size=(1<<10)):
+                                    chunk_size=(1 << 10)):
         """
         Create many items in bulk, or update the ones for which the id already exist.
 
@@ -1496,7 +1500,7 @@ class CrossingMindsApiClient:
         return self.api.put(path=path, data=data, timeout=10)
 
     @require_login
-    def create_or_update_ratings_bulk(self, ratings, chunk_size=(1<<14)):
+    def create_or_update_ratings_bulk(self, ratings, chunk_size=(1 << 14)):
         """
         Create or update large bulks of ratings for many users and many items.
 
@@ -1617,7 +1621,7 @@ class CrossingMindsApiClient:
         return self.api.post(path=path, data=data)
 
     @require_login
-    def create_interactions_bulk(self, interactions, chunk_size=(1<<14)):
+    def create_interactions_bulk(self, interactions, chunk_size=(1 << 14)):
         """
         Create or update large bulks of interactions for many users and many items.
         Inferred ratings will be created or updated for all tuples (user_id, item_id).
