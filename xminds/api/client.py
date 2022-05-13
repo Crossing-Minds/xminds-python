@@ -708,6 +708,10 @@ class CrossingMindsApiClient:
         :param dict user: user ID and properties {'user_id': ID, *<property_name: property_value>}
         :param bool? create_if_missing: control whether an error should be returned or a new user
         should be created when the ``user_id`` does not already exist. (default: False)
+        :returns: {
+            user_created: bool, True if the user did not exist and was created
+            user_modified: bool True if the user already exists and was modified
+        }
         """
         user = dict(user)
         user_id = self._userid2url(user.pop('user_id'))
@@ -735,8 +739,13 @@ class CrossingMindsApiClient:
                 }>
             }
         :param bool? create_if_missing: to control whether an error should be returned or new users
-        should be created when the ``user_id`` does not already exist. (default: False)
+            should be created when the ``user_id`` does not already exist. (default: False)
         :param int? chunk_size: split the requests in chunks of this size (default: 1K)
+        :returns: {
+            'n_created': int, m the number of users created,
+            'n_modified': int, <= n-m number of users modified but not created
+            'users_created': (m,) S64 array of users id created with m <= n,
+        }
         """
         path = f'users-bulk/'
         data = {}
@@ -993,6 +1002,10 @@ class CrossingMindsApiClient:
         :param dict item: item ID and properties {'item_id': ID, *<property_name: property_value>}
         :param bool? create_if_missing: control whether an error should be returned or a new item
             should be created when the ``item_id`` does not already exist. (default: false)
+        :returns: {
+            item_created: bool, True if the item did not exist and was created
+            item_modified: bool True if the item already exists and was modified
+        }
         """
         item = dict(item)
         item_id = self._itemid2url(item.pop('item_id'))
