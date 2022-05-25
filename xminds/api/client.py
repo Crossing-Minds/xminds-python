@@ -2147,6 +2147,10 @@ class CrossingMindsApiClient:
     def jwt_token(self):
         return self.api.jwt_token
 
+    @property
+    def last_trace(self):
+        return self.api.last_trace
+
     def set_jwt_token(self, jwt_token):
         self.api.set_jwt_token(jwt_token)
 

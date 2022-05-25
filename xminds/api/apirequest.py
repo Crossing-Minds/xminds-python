@@ -35,6 +35,7 @@ class _BaseCrossingMindsApiRequest:
         self.session = requests.Session()
         self.session.headers.update(headers)
         self._jwt_token = None
+        self._last_trace = None
 
     def get(self, path, params=None, **kwargs):
         return self._request('GET', path, params=params, **kwargs)
@@ -61,6 +62,10 @@ class _BaseCrossingMindsApiRequest:
 
     def clear_jwt_token(self):
         self.session.headers.pop('Authorization', None)
+
+    @property
+    def last_trace(self):
+        return self._last_trace
 
     # ConnectionError means the request didn't reach the server
     # so even POST requests can be retried:
@@ -94,7 +99,7 @@ class _BaseCrossingMindsApiRequest:
             raise exc
 
         data = self._parse_response(resp)
-
+        self._last_trace = resp.headers.get('X-Cloud-Trace-Context')
         return data
 
     def _serialize_data(self, data):
