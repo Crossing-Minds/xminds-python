@@ -61,7 +61,7 @@ class CrossingMindsApiClient:
         :param str last_name:
         :param str email:
         :param str password:
-        :returns: {'id': str}
+        :returns: {'id': str, 'warnings?': [str]}
         """
         path = f'accounts/individual/'
         data = {
@@ -85,6 +85,7 @@ class CrossingMindsApiClient:
         :param str? password:
         :param str? first_name:
         :param str? last_name:
+        :returns: {'warnings?': [str]}
         """
         path = f'accounts/individual/'
         data = {
@@ -106,7 +107,7 @@ class CrossingMindsApiClient:
         :param str name:
         :param str password:
         :param str? role:
-        :returns: {'id': str}
+        :returns: {'id': str, 'warnings?': [str]}
         """
         path = f'accounts/service/'
         data = {
@@ -125,6 +126,7 @@ class CrossingMindsApiClient:
 
         :param str name:
         :param str password:
+        :returns: {'warnings?': [str]}
         """
         path = f'accounts/service/'
         data = {
@@ -148,6 +150,7 @@ class CrossingMindsApiClient:
 
         :param str code:
         :param str email:
+        :returns: {'verified': bool, 'email': str, 'warnings?': [str]}
         """
         path = f'accounts/verify/'
         data = {
@@ -177,6 +180,7 @@ class CrossingMindsApiClient:
                     'role': str,
                 },
             ],
+            'warnings?': [str]
         }
         """
         path = f'organizations/accounts/'
@@ -229,6 +233,7 @@ class CrossingMindsApiClient:
                 'item_id_type': str,
                 'user_id_type': str,
             },
+            'warnings?': [str]
         }
         """
         path = f'login/individual/'
@@ -261,6 +266,7 @@ class CrossingMindsApiClient:
                 'item_id_type': str,
                 'user_id_type': str,
             },
+            'warnings?': [str]
         }
         """
         path = f'login/service/'
@@ -284,6 +290,7 @@ class CrossingMindsApiClient:
         :param str password:
         :returns: {
             'token': str,
+            'warnings?': [str]
         }
         """
         path = f'login/root/'
@@ -312,6 +319,7 @@ class CrossingMindsApiClient:
                 'item_id_type': str,
                 'user_id_type': str,
             },
+            'warnings?': [str]
         }
         """
         refresh_token = refresh_token or self._refresh_token
@@ -334,7 +342,8 @@ class CrossingMindsApiClient:
     @require_login
     def get_organization(self):
         """
-        get organization meta-data
+        Get organization meta-data
+        :returns: {'metadata': dict, 'warnings?': [str]}
         """
         path = f'organizations/current/'
         return self.api.get(path=path)
@@ -342,7 +351,7 @@ class CrossingMindsApiClient:
     @require_login
     def create_or_partial_update_organization(self, metadata, preserve=None):
         """
-        create, or apply deep partial update of meta-data
+        Create, or apply deep partial update of meta-data
         :param dict metadata: meta-data to store structured as unvalidated JSON-compatible dict
         :param bool? preserve: set to `True` to append values instead of replace as in RFC7396
         """
@@ -355,7 +364,7 @@ class CrossingMindsApiClient:
     @require_login
     def partial_update_organization_preview(self, metadata, preserve=None):
         """
-        preview deep partial update of extra data, without changing any state
+        Preview deep partial update of extra data, without changing any state
         :param dict metadata: extra meta-data to store structured as unvalidated JSON-compatible dict
         :param bool? preserve: set to `True` to append values instead of replace as in RFC7396
         :returns: {
@@ -367,6 +376,7 @@ class CrossingMindsApiClient:
                 'description': str,
                 'extra': {**any-key: any-val},
             },
+            'warnings?': [str]
         }
         """
         path = f'organizations/current/preview/'
@@ -388,6 +398,7 @@ class CrossingMindsApiClient:
         :param str item_id_type: Item ID type
         :param str user_id_type: User ID type
         :param float? item_filter_cache_expiration: Refresh cache time of items filters (in seconds)
+        :returns: {'id': str, 'warnings?': str}
         """
         path = f'databases/'
         data = {
@@ -418,7 +429,8 @@ class CrossingMindsApiClient:
                     'item_id_type': str,
                     'user_id_type': str,
                 },
-            ]
+            ],
+            'warnings?': [str]
         }
         """
         path = f'databases/'
@@ -446,6 +458,7 @@ class CrossingMindsApiClient:
                 'item': int,
             },
             'metadata': {**any-key: any-val},
+            'warnings?': [str]
         }
         """
         path = f'databases/current/'
@@ -473,7 +486,7 @@ class CrossingMindsApiClient:
     @require_login
     def partial_update_database_preview(self, description=None, metadata=None, preserve=None):
         """
-        preview deep partial update of extra data, without changing any state
+        Preview deep partial update of extra data, without changing any state
         :param str? description: description of DB
         :param dict? metadata: extra data to store structured as unvalidated JSON-compatible dict
         :param bool? preserve: set to `True` to append values instead of replace as in RFC7396
@@ -486,6 +499,7 @@ class CrossingMindsApiClient:
                 'description': str,
                 'metadata': {**any-key: any-val},
             },
+            'warnings?': [str]
         }
         """
         path = f'databases/current/preview/'
@@ -511,6 +525,7 @@ class CrossingMindsApiClient:
     def status(self):
         """
         Get readiness status of current database.
+        :returns: {'status': str, 'warnings?': [str]}
         """
         path = f'databases/current/status/'
         return self.api.get(path=path)
@@ -527,6 +542,7 @@ class CrossingMindsApiClient:
             'property_name': str,
             'value_type': str,
             'repeated': bool,
+            'warnings?': [str]
         }
         """
         path = f'users-properties/{self.escape_url(property_name)}/'
@@ -543,6 +559,7 @@ class CrossingMindsApiClient:
                 'value_type': str,
                 'repeated': bool,
             }],
+            'warnings?': [str]
         }
         """
         path = f'users-properties/'
@@ -587,7 +604,8 @@ class CrossingMindsApiClient:
             'item': {
                 'id': ID,
                 *<property_name: property_value>,
-            }
+            },
+            'warnings?': [str]
         }
         """
         user_id = self._userid2url(user_id)
@@ -614,7 +632,8 @@ class CrossingMindsApiClient:
                         'name': str,
                         'array': array with fields ['user_index': uint32, 'value_id': value_type],
                     }>
-                }
+                },
+            'warnings?': [str]
         }
         """
         users_id = self._userid2body(users_id)
@@ -645,6 +664,7 @@ class CrossingMindsApiClient:
                 },
             'has_next': bool,
             'next_cursor': str, pagination cursor to use in next request to get more users,
+            'warnings?': [str],
         }
         """
         path = f'users-bulk/'
@@ -709,8 +729,9 @@ class CrossingMindsApiClient:
         :param bool? create_if_missing: control whether an error should be returned or a new user
         should be created when the ``user_id`` does not already exist. (default: False)
         :returns: {
-            user_created: bool, True if the user did not exist and was created
-            user_modified: bool True if the user already exists and was modified
+            'user_created': bool, True if the user did not exist and was created,
+            'user_modified': bool True if the user already exists and was modified,
+            'warnings?': [str],
         }
         """
         user = dict(user)
@@ -741,11 +762,6 @@ class CrossingMindsApiClient:
         :param bool? create_if_missing: to control whether an error should be returned or new users
             should be created when the ``user_id`` does not already exist. (default: False)
         :param int? chunk_size: split the requests in chunks of this size (default: 1K)
-        :returns: {
-            'n_created': int, m the number of users created,
-            'n_modified': int, <= n-m number of users modified but not created
-            'users_created': (m,) S64 array of users id created with m <= n,
-        }
         """
         path = f'users-bulk/'
         data = {}
@@ -818,6 +834,7 @@ class CrossingMindsApiClient:
             'property_name': str,
             'value_type': str,
             'repeated': bool,
+            'warnings?': [str],
         }
         """
         path = f'items-properties/{self.escape_url(property_name)}/'
@@ -834,6 +851,7 @@ class CrossingMindsApiClient:
                 'value_type': str,
                 'repeated': bool,
             }],
+            'warnings?': [str],
         }
         """
         path = f'items-properties/'
@@ -878,7 +896,8 @@ class CrossingMindsApiClient:
             'item': {
                 'id': ID,
                 *<property_name: property_value>,
-            }
+            },
+            'warnings?': [str],
         }
         """
         item_id = self._itemid2url(item_id)
@@ -905,7 +924,8 @@ class CrossingMindsApiClient:
                         'name': str,
                         'array': array with fields ['item_index': uint32, 'value_id': value_type],
                     }>
-                }
+                },
+            'warnings?': [str],
         }
         """
         items_id = self._itemid2body(items_id)
@@ -936,6 +956,7 @@ class CrossingMindsApiClient:
                 },
             'has_next': bool,
             'next_cursor': str, pagination cursor to use in next request to get more items,
+            'warnings?': [str],
         }
         """
         path = f'items-bulk/'
@@ -954,7 +975,7 @@ class CrossingMindsApiClient:
         Create a new item, or update it if the ID already exists.
 
         :param dict item: item ID and properties {'item_id': ID, *<property_name: property_value>}
-        :param bool? wait_for_completion: (default: true)
+        :param bool? wait_for_completion: (default: True)
         """
         item = dict(item)
         item_id = self._itemid2url(item.pop('item_id'))
@@ -981,8 +1002,8 @@ class CrossingMindsApiClient:
                     'array': array with fields ['item_index': uint32, 'value_id': value_type],
                 }>
             }
-        :param bool? wait_for_completion: (default: true)
-        :param int? chunk_size: split the requests in chunks of this size (default: 1K)
+        :param bool? wait_for_completion: (default: True)
+        :param int? chunk_size: split the requests in chunks of this size (default: 1000)
         """
         path = f'items-bulk/'
         for items_chunk, items_m2m_chunk in self._chunk_items(items, items_m2m, chunk_size):
@@ -1003,8 +1024,9 @@ class CrossingMindsApiClient:
         :param bool? create_if_missing: control whether an error should be returned or a new item
             should be created when the ``item_id`` does not already exist. (default: false)
         :returns: {
-            item_created: bool, True if the item did not exist and was created
-            item_modified: bool True if the item already exists and was modified
+            'item_created': bool, True if the item did not exist and was created
+            'item_modified': bool, True if the item already exists and was modified
+            'warnings?': [str],
         }
         """
         item = dict(item)
@@ -1033,8 +1055,8 @@ class CrossingMindsApiClient:
                 }>
             }
         :param bool? create_if_missing: control whether an error should be returned or a new item
-        should be created when the ``item_id`` does not already exist. (default: false)
-        :param int? chunk_size: split the requests in chunks of this size (default: 1K)
+        should be created when the ``item_id`` does not already exist. (default: False)
+        :param int? chunk_size: split the requests in chunks of this size (default: 1000)
         :param bool? wait_for_completion: (default: True)
         """
         path = f'items-bulk/'
@@ -1119,6 +1141,7 @@ class CrossingMindsApiClient:
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
+            'warnings?': [str],
         }
         """
         item_id = self._itemid2url(item_id)
@@ -1158,6 +1181,7 @@ class CrossingMindsApiClient:
         :param bool? skip_default_scenario: Specify whether default scenario should by applied or skipped
         :returns: {
             'items_id': array of items IDs,
+            'warnings?': [str],
         }
         """
         item_id = self._itemid2url(item_id)
@@ -1199,6 +1223,7 @@ class CrossingMindsApiClient:
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
+            'warnings?': [str],
         }
         """
         path = f'recommendation/sessions/items/'
@@ -1249,6 +1274,7 @@ class CrossingMindsApiClient:
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
+            'warnings?': [str],
         }
         """
         user_id = self._userid2url(user_id)
@@ -1288,7 +1314,8 @@ class CrossingMindsApiClient:
         :param str? scenario: scenario name
         :param bool? skip_default_scenario: Specify whether default scenario should by applied or skipped
         :returns: {
-            'items_id': array of items IDs
+            'items_id': array of items IDs,
+            'warnings?': [str],
         }
         """
         user_id = self._userid2url(user_id)
@@ -1319,7 +1346,7 @@ class CrossingMindsApiClient:
         :param str? scenario:
         :raises: NotFoundError when data not found
         :raises: RequestError if property missing
-        :return: {'properties': [n,] np.array, n<=amt}
+        :return: {'properties': [n,] np.array, n<=amt, 'warnings?': [str]}
         """
         user_id = self._userid2url(user_id)
         path = f'recommendation/users/{user_id}/items-properties/{item_property_name}/'
@@ -1360,7 +1387,7 @@ class CrossingMindsApiClient:
         :param str? scenario:
         :raises: NotFoundError when data not found
         :raises: RequestError if property missing
-        :return: {'properties': [n,] np.array, n<=amt}
+        :return: {'properties': [n,] np.array, n<=amt, 'warnings?': [str]}
         """
         path = f'recommendation/sessions/items-properties/{item_property_name}/'
         data = {}
@@ -1406,6 +1433,7 @@ class CrossingMindsApiClient:
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
+            'warnings?': [str],
         }
         """
         path = f'recommendation/context-items/sessions/items/'
@@ -1455,6 +1483,7 @@ class CrossingMindsApiClient:
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
+            'warnings?': [str],
         }
         """
         user_id = self._userid2url(user_id)
@@ -1556,6 +1585,7 @@ class CrossingMindsApiClient:
             'next_page': int,
             'user_ratings': ratings array with fields
                 ['item_id': ID, 'rating': float, 'timestamp': float]
+            'warnings?': [str],
         }
         """
         user_id = self._userid2url(user_id)
@@ -1581,6 +1611,7 @@ class CrossingMindsApiClient:
             'next_cursor': str,
             'ratings': array with fields
                 ['item_id': ID, 'user_id': ID, 'rating': float, 'timestamp': float]
+            'warnings?': [str],
         }
         """
         path = f'ratings-bulk/'
@@ -1649,7 +1680,7 @@ class CrossingMindsApiClient:
 
         :param array interactions: interactions array with fields:
             ['user_id': ID, 'item_id': ID, 'interaction_type': str, 'timestamp': float]
-        :param int? chunk_size: split the requests in chunks of this size (default: 16K)
+        :param int? chunk_size: split the requests in chunks of this size (default: 16_000)
         """
         path = f'interactions-bulk/'
         n_chunks = int(numpy.ceil(len(interactions) / chunk_size))
@@ -1675,7 +1706,7 @@ class CrossingMindsApiClient:
         :param ID user_id: user ID
         :param array interactions: interactions array with fields:
             ['item_id': ID, 'interaction_type': str, 'timestamp': float]
-        :param int? chunk_size: split the requests in chunks of this size (default: 16K)
+        :param int? chunk_size: split the requests in chunks of this size (default: 16_000)
         """
         path = f'users/{user_id}/interactions-bulk/'
         data = {
@@ -1702,6 +1733,7 @@ class CrossingMindsApiClient:
             'next_cursor': str,
             'interactions': array with fields
                 ['item_id': ID, 'user_id': ID, 'interaction_type': str, 'timestamp': float]
+            'warnings?': [str],
         }
         :raises: RequestError if provided timeframe is invalid
         """
@@ -1719,27 +1751,6 @@ class CrossingMindsApiClient:
         resp['interactions'] = self._body2userid(self._body2itemid(resp['interactions']))
         return resp
 
-    # === Data Dump Storage ===
-
-    @require_login
-    def get_data_dump_signed_urls(self, name, content_type, resource):
-        """
-        Get signed url to upload a file. (url_upload and url_report)
-
-        :param str? name: filename
-        :param str? content_type:
-        :param str? resource: values allowed are `items`, `users`, `ratings` and `ratings_implicit`.
-        :returns: {
-            'url_upload': str,
-            'url_report': str,
-        }
-        """
-        path = f'data-dump-storage/signed-url/'
-        params = {'name': name,
-                  'content_type': content_type,
-                  'resource': resource}
-        return self.api.get(path=path, params=params)
-
     # === Scheduled Background Tasks ===
 
     @require_login
@@ -1752,6 +1763,7 @@ class CrossingMindsApiClient:
         :param dict? payload: optional task payload
         :returns: {
             'task_id': str,
+            'warnings?': [str],
         }
         :raises: DuplicatedError with error name 'TASK_ALREADY_RUNNING'
             if this task is already running
@@ -1779,6 +1791,7 @@ class CrossingMindsApiClient:
                 'status': str,
                 'progress?': str,
             }],
+            'warnings?': [str],
         }
         """
         params = {}
@@ -1822,6 +1835,7 @@ class CrossingMindsApiClient:
         :param int? sleep: time to wait between polling (default: 1s)
         :returns: {
             'task_id': str,
+            'warnings?': [str],
         }
         :raises: RuntimeError if either ``timeout`` or ``lock_wait_timeout`` is reached
         """
@@ -1862,7 +1876,7 @@ class CrossingMindsApiClient:
         :param func? filtr: filter function(task: bool)
         :param bool? wait_if_no_task: wait (instead of return) if there is no task satisfying filter
         :param func? func_list_tasks: function to list background tasks (default: self.get_background_tasks)
-        :returns: True is a task satisfying filters successfully ran, False otherwise
+        :returns: bool; True is a task satisfying filters successfully ran, False otherwise
         :raises: RuntimeError if ``timeout`` is reached or if the task failed
         """
         spinner = '|/-\\'
@@ -1910,7 +1924,8 @@ class CrossingMindsApiClient:
                     'trained_timestamp': str
                     'algorithm': str,
                 }
-            ]
+            ],
+            'warnings?': [str],
         }
         """
         path = f'pretrained-ml/trained-models/'
@@ -1938,7 +1953,8 @@ class CrossingMindsApiClient:
                     'algorithms?': str,
                     'candidates_preselection?': dict,
                 }
-            }
+            },
+            'warnings?': [str],
         }
         or
         {
@@ -1951,7 +1967,8 @@ class CrossingMindsApiClient:
                     'scenario_a': str,
                     'scenario_b': str
                 }
-            }
+            },
+            'warnings?': [str],
         }
         or
         {
@@ -1965,7 +1982,8 @@ class CrossingMindsApiClient:
                     'then': str,
                     'else': str
                 }
-            }
+            },
+            'warnings?': [str],
         }
         """
         path = f'scenarios/{reco_type}/{name}/'
@@ -1986,7 +2004,8 @@ class CrossingMindsApiClient:
                         'case?ab_test?condition?': dict
                     }
                 }
-            ]
+            ],
+            'warnings?': [str],
         }
         """
         path = f'scenarios/'
@@ -2026,6 +2045,7 @@ class CrossingMindsApiClient:
                     'else': str    # scenario name
                 }
             }
+        :returns: {'warnings?': [str]}
         :raise: RequestError if some business rule is invalid
         :raise: NotFoundError if an AB-test or a then/else scenario is not found
 
@@ -2116,6 +2136,7 @@ class CrossingMindsApiClient:
         :return:
         {
             'name': str,
+            'warnings?': [str],
         }
         """
         path = f'scenarios-default/{reco_type}/'
@@ -2153,6 +2174,9 @@ class CrossingMindsApiClient:
 
     def set_jwt_token(self, jwt_token):
         self.api.set_jwt_token(jwt_token)
+
+    def escape_url(self, param):
+        return quote(param, safe='')
 
     def _userid2url(self, user_id):
         """ base64 encode if needed """
@@ -2225,9 +2249,6 @@ class CrossingMindsApiClient:
             return base64.b64decode(data, b'-_')
         except BinasciiError:
             raise TypeError()
-
-    def escape_url(self, param):
-        return quote(param, safe='')
 
     def _get_latest_task_progress_message(self, task_name,
                                           default=None, default_running=None, default_failed=None):
