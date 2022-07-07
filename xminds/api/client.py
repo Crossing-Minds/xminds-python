@@ -1329,6 +1329,51 @@ class CrossingMindsApiClient:
             params['skip_default_scenario'] = skip_default_scenario
         return self.api.get(path=path, params=params)
 
+    # === Reco: Group-users-to-item ===
+
+    @require_login
+    def get_reco_users_group_to_items(self, users_id, consensus_factor=None, amt=None, cursor=None,
+                               scenario=None, filters=None, reranking=None,
+                               skip_default_scenario=None):
+        """
+        Get items recommendations given a list of users IDs.
+
+        :param array users_id: user ID array with filed ['user_id': ID]
+        :param float? consensus_factor: consensus between the users' tastes
+        :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
+        :param str? scenario: scenario's name
+        :param list-str? filters: Item-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
+        :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
+        :param bool? skip_default_scenario: True to skip default scenario if any
+        :returns: {
+            'items_id': array of items IDs,
+            'next_cursor': str, pagination cursor to use in next request to get more items,
+            'warnings?': [str],
+        }
+        """
+        path = f'recommendation/users-groups/items/'
+        data = {
+            'users_id': users_id
+        }
+        if consensus_factor:
+            data['consensus_factor'] = consensus_factor
+        if amt:
+            data['amt'] = amt
+        if cursor:
+            data['cursor'] = cursor
+        if filters:
+            data['filters'] = filters
+        if reranking:
+            data['reranking'] = reranking
+        if scenario:
+            data['scenario'] = scenario
+        if skip_default_scenario is not None:
+            data['skip_default_scenario'] = skip_default_scenario
+        resp = self.api.post(path=path, data=data)
+        resp['items_id'] = self._body2itemid(resp['items_id'])
+        return resp
+
     # === Reco: User-to-item-property ===
 
     @require_login
