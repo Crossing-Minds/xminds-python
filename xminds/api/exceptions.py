@@ -18,6 +18,8 @@ class XMindsError(Exception):
                 self.message = self.message.format(**data)
             except KeyError as e:
                 print(f'Missing key {e} in ``error_extra_data``')
+            except TypeError:
+                print('Unexpected error formatting: error data is not a dict')
 
     def __str__(self):
         msg = self.message
