@@ -1332,13 +1332,13 @@ class CrossingMindsApiClient:
     # === Reco: Group-users-to-item ===
 
     @require_login
-    def get_reco_users_group_to_items(self, users_id, consensus_factor=None, amt=None, cursor=None,
+    def get_reco_users_group_to_items(self, users, consensus_factor=None, amt=None, cursor=None,
                                scenario=None, filters=None, reranking=None,
                                skip_default_scenario=None):
         """
         Get items recommendations given a list of users IDs.
 
-        :param array users_id: user ID array with filed ['user_id': ID]
+        :param array users: user array with fields ['user_id': ID]
         :param float? consensus_factor: consensus between the users' tastes
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
@@ -1354,7 +1354,7 @@ class CrossingMindsApiClient:
         """
         path = f'recommendation/users-groups/items/'
         data = {
-            'users_id': users_id
+            'users': users
         }
         if consensus_factor:
             data['consensus_factor'] = consensus_factor
