@@ -1123,9 +1123,11 @@ class CrossingMindsApiClient:
     # === Reco: Item-to-item ===
 
     @require_login
-    def get_reco_item_to_items(self, item_id, amt=None, cursor=None,
-                               scenario=None, filters=None, reranking=None,
-                               skip_default_scenario=None, user_id=None):
+    def get_reco_item_to_items(
+            self, item_id, amt=None, cursor=None,
+            scenario=None, filters=None, reranking=None,
+            skip_default_scenario=None, user_id=None,
+    ):
         """
         Get similar items.
 
@@ -1142,6 +1144,10 @@ class CrossingMindsApiClient:
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
             'warnings?': [str],
+            'evaluated_scenarios': {
+                'runtime?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}],
+                'default?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}]
+            }
         }
         """
         item_id = self._itemid2url(item_id)
@@ -1198,10 +1204,12 @@ class CrossingMindsApiClient:
     # === Reco: Session-to-item ===
 
     @require_login
-    def get_reco_session_to_items(self, ratings=None, interactions=None, user_properties=None,
-                                  amt=None, cursor=None, scenario=None, filters=None,
-                                  reranking=None, exclude_rated_items=None,
-                                  skip_default_scenario=None, user_id=None):
+    def get_reco_session_to_items(
+            self, ratings=None, interactions=None, user_properties=None,
+            amt=None, cursor=None, scenario=None, filters=None,
+            reranking=None, exclude_rated_items=None,
+            skip_default_scenario=None, user_id=None,
+    ):
         """
         Get items recommendations given the ratings or interactions of an anonymous session.
         Ratings and interactions are mutually exclusive.
@@ -1224,6 +1232,10 @@ class CrossingMindsApiClient:
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
             'warnings?': [str],
+            'evaluated_scenarios': {
+                'runtime?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}],
+                'default?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}]
+            }
         }
         """
         path = f'recommendation/sessions/items/'
@@ -1257,9 +1269,11 @@ class CrossingMindsApiClient:
     # === Reco: User-to-item ===
 
     @require_login
-    def get_reco_user_to_items(self, user_id, amt=None, cursor=None, scenario=None,
-                               filters=None, reranking=None,
-                               exclude_rated_items=None, skip_default_scenario=None):
+    def get_reco_user_to_items(
+            self, user_id, amt=None, cursor=None, scenario=None,
+            filters=None, reranking=None,
+            exclude_rated_items=None, skip_default_scenario=None,
+    ):
         """
         Get items recommendations given a user ID.
 
@@ -1275,6 +1289,10 @@ class CrossingMindsApiClient:
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
             'warnings?': [str],
+            'evaluated_scenarios': {
+                'runtime?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}],
+                'default?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}]
+            }
         }
         """
         user_id = self._userid2url(user_id)
