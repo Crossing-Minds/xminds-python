@@ -216,7 +216,8 @@ class CrossingMindsApiClient:
 
     # === Login ===
 
-    def login_individual(self, email, password, db_id, frontend_user_id=None):
+    def login_individual(self, email, password, db_id, frontend_user_id=None,
+                         frontend_session_id=None):
         """
         Login on a database with an account
 
@@ -224,6 +225,7 @@ class CrossingMindsApiClient:
         :param str password:
         :param str db_id:
         :param ID? frontend_user_id: user ID
+        :param ID? frontend_session_id: anonymous session ID
         :returns: {
             'token': str,
             'database': {
@@ -232,6 +234,7 @@ class CrossingMindsApiClient:
                 'description': str,
                 'item_id_type': str,
                 'user_id_type': str,
+                'session_id_type': str,
             },
             'warnings?': [str]
         }
@@ -247,9 +250,15 @@ class CrossingMindsApiClient:
             if isinstance(frontend_user_id, bytes) and self.b64_encode_bytes:
                 frontend_user_id = self._b64_encode(frontend_user_id)
             data['frontend_user_id'] = frontend_user_id
+        if frontend_session_id is not None:
+            # cannot use `_sessionid2body` since we are not logged in yet
+            if isinstance(frontend_session_id, bytes) and self.b64_encode_bytes:
+                frontend_session_id = self._b64_encode(frontend_session_id)
+            data['frontend_session_id'] = frontend_session_id
         return self._login(path, data)
 
-    def login_service(self, name, password, db_id, frontend_user_id=None):
+    def login_service(self, name, password, db_id, frontend_user_id=None,
+                      frontend_session_id=None):
         """
         Login on a database with a service account
 
@@ -257,6 +266,7 @@ class CrossingMindsApiClient:
         :param str password:
         :param str db_id:
         :param ID? frontend_user_id: user ID
+        :param ID? frontend_session_id: anonymous session ID
         :returns: {
             'token': str,
             'database': {
@@ -265,6 +275,7 @@ class CrossingMindsApiClient:
                 'description': str,
                 'item_id_type': str,
                 'user_id_type': str,
+                'session_id_type': str,
             },
             'warnings?': [str]
         }
@@ -280,6 +291,11 @@ class CrossingMindsApiClient:
             if isinstance(frontend_user_id, bytes) and self.b64_encode_bytes:
                 frontend_user_id = self._b64_encode(frontend_user_id)
             data['frontend_user_id'] = frontend_user_id
+        if frontend_session_id is not None:
+            # cannot use `_sessionid2body` since we are not logged in yet
+            if isinstance(frontend_session_id, bytes) and self.b64_encode_bytes:
+                frontend_session_id = self._b64_encode(frontend_session_id)
+            data['frontend_session_id'] = frontend_session_id
         return self._login(path, data)
 
     def login_root(self, email, password):
@@ -318,6 +334,7 @@ class CrossingMindsApiClient:
                 'description': str,
                 'item_id_type': str,
                 'user_id_type': str,
+                'session_id_type': str,
             },
             'warnings?': [str]
         }
@@ -388,7 +405,7 @@ class CrossingMindsApiClient:
     # === Database ===
 
     @require_login
-    def create_database(self, name, description, item_id_type, user_id_type,
+    def create_database(self, name, description, item_id_type, user_id_type, session_id_type=None,
                         item_filter_cache_expiration=None):
         """
         Create a new database
@@ -397,6 +414,7 @@ class CrossingMindsApiClient:
         :param str description:
         :param str item_id_type: Item ID type
         :param str user_id_type: User ID type
+        :param str? session_id_type: Anonymous Session ID type
         :param float? item_filter_cache_expiration: Refresh cache time of items filters (in seconds)
         :returns: {'id': str, 'warnings?': str}
         """
@@ -409,6 +427,8 @@ class CrossingMindsApiClient:
         }
         if item_filter_cache_expiration:
             data['item_filter_cache_expiration'] = item_filter_cache_expiration
+        if session_id_type:
+            data['session_id_type'] = session_id_type
         return self.api.post(path=path, data=data)
 
     @require_login
@@ -428,6 +448,7 @@ class CrossingMindsApiClient:
                     'description': str,
                     'item_id_type': str,
                     'user_id_type': str,
+                    'session_id_type': str,
                 },
             ],
             'warnings?': [str]
@@ -452,6 +473,7 @@ class CrossingMindsApiClient:
             'description': str,
             'item_id_type': str,
             'user_id_type': str,
+            'session_id_type': str,
             'counters': {
                 'rating': int,
                 'user': int,
@@ -1204,12 +1226,10 @@ class CrossingMindsApiClient:
     # === Reco: Session-to-item ===
 
     @require_login
-    def get_reco_session_to_items(
-            self, ratings=None, interactions=None, user_properties=None,
-            amt=None, cursor=None, scenario=None, filters=None,
-            reranking=None, exclude_rated_items=None,
-            skip_default_scenario=None, user_id=None,
-    ):
+    def get_reco_session_to_items(self, ratings=None, interactions=None, user_properties=None,
+                                  amt=None, cursor=None, scenario=None, filters=None,
+                                  reranking=None, exclude_rated_items=None,
+                                  skip_default_scenario=None, user_id=None, session_id=None):
         """
         Get items recommendations given the ratings or interactions of an anonymous session.
         Ratings and interactions are mutually exclusive.
@@ -1228,6 +1248,7 @@ class CrossingMindsApiClient:
         :param bool? skip_default_scenario: True to skip default scenario if any
         :param ID? user_id: user ID. Only used in the context of an A/B test scenario to select the group A or B
             and keep track of the respective group in analytics, NOT used to personalize recommendations
+        :param ID? session_id: Anonymous Session ID.
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
@@ -1262,6 +1283,8 @@ class CrossingMindsApiClient:
             data['interactions'] = interactions
         if user_id:
             data['user_id'] = user_id
+        if session_id:
+            data['session_id'] = session_id
         resp = self.api.post(path=path, data=data)
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
@@ -1434,7 +1457,7 @@ class CrossingMindsApiClient:
             interactions=None,
             user_properties: dict = None,
             user_id=None, amt=None,
-            skip_default_scenario=None, filters=None, scenario=None):
+            skip_default_scenario=None, filters=None, scenario=None, session_id=None):
         """
         Recommends item-property values given a session
         :param str item_property_name:
@@ -1448,6 +1471,7 @@ class CrossingMindsApiClient:
         :param list-str? filters: filters on intermediate items.
             Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
         :param str? scenario:
+        :param bytes? session_id: Anonymous Session ID
         :raises: NotFoundError when data not found
         :raises: RequestError if property missing
         :return: {'properties': [n,] np.array, n<=amt, 'warnings?': [str]}
@@ -1470,6 +1494,8 @@ class CrossingMindsApiClient:
             data['interactions'] = interactions
         if user_properties:
             data['user_properties'] = user_properties
+        if session_id:
+            data['session_id'] = session_id
         resp = self.api.post(path=path, data=data)
         return resp
 
@@ -1812,6 +1838,116 @@ class CrossingMindsApiClient:
             params['end_timestamp'] = end_timestamp
         resp = self.api.get(path=path, params=params)
         resp['interactions'] = self._body2userid(self._body2itemid(resp['interactions']))
+        return resp
+
+    # === Session Interactions ===
+
+    @require_login
+    def create_session_interaction(self, session_id, item_id, interaction_type, timestamp=None):
+        """
+        This endpoint allows you to create a new interaction for an anonymous session and an item.
+
+        :param ID session_id: anonymous session ID
+        :param ID item_id: item ID
+        :param str interaction_type: Interaction type
+        :param float? timestamp: rating timestamp (default: now)
+        :returns: {
+            'warnings?': [str],
+        }
+        """
+        session_id = self._sessionid2url(session_id)
+        item_id = self._itemid2url(item_id)
+        path = f'sessions/{session_id}/items/{item_id}/interactions/'
+        data = {
+            'interaction_type': interaction_type,
+        }
+        if timestamp is not None:
+            data['timestamp'] = timestamp
+        return self.api.post(path=path, data=data)
+
+    @require_login
+    def create_sessions_interactions_bulk(self, interactions, chunk_size=(1 << 14)):
+        """
+        Create or update large bulks of interactions for many anonymous session and many items.
+
+        :param array interactions: interactions array with fields:
+            ['session_id': ID, 'item_id': ID, 'interaction_type': str, 'timestamp': float]
+        :param int? chunk_size: split the requests in chunks of this size (default: 16_000)
+        :returns: {
+            'warnings?': [str],
+        }
+        """
+        path = f'sessions/interactions-bulk/'
+        n_chunks = int(numpy.ceil(len(interactions) / chunk_size))
+        sleep = chunk_size / 500
+        warnings = []
+        for i in tqdm(range(n_chunks), disable=(True if n_chunks < 4 else None)):
+            interactions_chunk = interactions[i * chunk_size:(i + 1) * chunk_size]
+            interactions_chunk = self._sessionid2body(self._itemid2body(interactions_chunk))
+            data = {
+                'interactions': interactions_chunk,
+            }
+            resp = self.api.post(path=path, data=data, timeout=10)
+            warnings.extend(resp.get('warnings', []))
+            if n_chunks > 1:
+                time.sleep(sleep)
+        return {'warnings': warnings} if warnings else {}
+
+    @require_login
+    def create_session_interactions_bulk(self, session_id, interactions):
+        """
+        Create a small bulk of interactions for a single anonymous session and many items.
+
+        :param ID session_id: anonymous session ID
+        :param array interactions: interactions array with fields:
+            ['item_id': ID, 'interaction_type': str, 'timestamp': float]
+        :param int? chunk_size: split the requests in chunks of this size (default: 16_000)
+        :returns: {
+            'warnings?': [str],
+        }
+        """
+        session_id = self._sessionid2url(session_id)
+        path = f'sessions/{session_id}/interactions-bulk/'
+        data = {
+            'interactions': self._itemid2body(interactions),
+        }
+        return self.api.post(path=path, data=data, timeout=10)
+
+    @require_login
+    def list_sessions_interactions(
+            self, amt=None, cursor=None,
+            start_timestamp=None, end_timestamp=None
+    ):
+        """
+        List the anonymous sessions interactions of one database
+
+        :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
+        :param float? start_timestamp: When provided, only returns interactions
+            timestamped after this value
+        :param float? end_timestamp: When provided, only returns interactions
+            timestamped before this value
+        :returns: {
+            'has_next': bool,
+            'next_cursor': str,
+            'interactions': array with fields
+                ['item_id': ID, 'session_id': ID, 'interaction_type': str, 'timestamp': float]
+            'warnings?': [str],
+        }
+        :raises: RequestError if provided timeframe is invalid
+        """
+        path = f'sessions/interactions-bulk/'
+        params = {}
+        if amt:
+            params['amt'] = amt
+        if cursor:
+            params['cursor'] = cursor
+        if start_timestamp:
+            params['start_timestamp'] = start_timestamp
+        if end_timestamp:
+            params['end_timestamp'] = end_timestamp
+        resp = self.api.get(path=path, params=params)
+        resp['interactions'] = self._body2sessionid(self._body2itemid(resp['interactions']))
         return resp
 
     # === Scheduled Background Tasks ===
@@ -2249,6 +2385,10 @@ class CrossingMindsApiClient:
         """ base64 encode if needed """
         return self._id2url(item_id, 'item')
 
+    def _sessionid2url(self, item_id):
+        """ base64 encode if needed """
+        return self._id2url(item_id, 'session')
+
     def _id2url(self, data, field):
         """ base64 encode if needed """
         assert self._database is not None, f'You need to login to a database first'
@@ -2264,11 +2404,17 @@ class CrossingMindsApiClient:
     def _itemid2body(self, data):
         return self._base_field_id(data, 'item', self._id2body)
 
+    def _sessionid2body(self, data):
+        return self._base_field_id(data, 'session', self._id2body)
+
     def _body2userid(self, data):
         return self._base_field_id(data, 'user', self._body2id)
 
     def _body2itemid(self, data):
         return self._base_field_id(data, 'item', self._body2id)
+
+    def _body2sessionid(self, data):
+        return self._base_field_id(data, 'session', self._body2id)
 
     def _base_field_id(self, data, field, cast_func):
         if not self.b64_encode_bytes:
