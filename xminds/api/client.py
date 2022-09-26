@@ -1148,7 +1148,8 @@ class CrossingMindsApiClient:
     def get_reco_item_to_items(
             self, item_id, amt=None, cursor=None,
             scenario=None, filters=None, reranking=None,
-            skip_default_scenario=None, user_id=None,
+            skip_default_scenario=None,
+            user_id=None, session_id=None,
     ):
         """
         Get similar items.
@@ -1161,6 +1162,8 @@ class CrossingMindsApiClient:
         :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
         :param bool? skip_default_scenario: True to skip default scenario if any
         :param ID? user_id: user ID. Only used in the context of an A/B test scenario to select the group A or B
+            and keep track of the respective group in analytics, NOT used to personalize recommendations
+        :param ID? session_id: session ID. Only used in the context of an A/B test scenario to select the group A or B
             and keep track of the respective group in analytics, NOT used to personalize recommendations
         :returns: {
             'items_id': array of items IDs,
@@ -1189,6 +1192,8 @@ class CrossingMindsApiClient:
             params['skip_default_scenario'] = skip_default_scenario
         if user_id:
             params['user_id'] = user_id
+        if session_id:
+            params['session_id'] = session_id
         resp = self.api.get(path=path, params=params)
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
