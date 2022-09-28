@@ -471,7 +471,7 @@ class CrossingMindsApiClient:
         """
         path = f'databases/'
         params = {}
-        if amt:
+        if amt is not None:
             params['amt'] = amt
         if page:
             params['page'] = page
@@ -706,7 +706,7 @@ class CrossingMindsApiClient:
         """
         path = f'users-bulk/'
         params = {}
-        if amt:
+        if amt is not None:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
@@ -998,7 +998,7 @@ class CrossingMindsApiClient:
         """
         path = f'items-bulk/'
         params = {}
-        if amt:
+        if amt is not None:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
@@ -1193,7 +1193,7 @@ class CrossingMindsApiClient:
         item_id = self._itemid2url(item_id)
         path = f'recommendation/items/{item_id}/items/'
         params = {}
-        if amt:
+        if amt is not None:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
@@ -1285,7 +1285,7 @@ class CrossingMindsApiClient:
             data['ratings'] = self._itemid2body(ratings)
         if user_properties:
             data['user_properties'] = user_properties
-        if amt:
+        if amt is not None:
             data['amt'] = amt
         if cursor:
             data['cursor'] = cursor
@@ -1341,7 +1341,7 @@ class CrossingMindsApiClient:
         user_id = self._userid2url(user_id)
         path = f'recommendation/users/{user_id}/items/'
         params = {}
-        if amt:
+        if amt is not None:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
@@ -1419,7 +1419,7 @@ class CrossingMindsApiClient:
         }
         if consensus_factor:
             data['consensus_factor'] = consensus_factor
-        if amt:
+        if amt is not None:
             data['amt'] = amt
         if cursor:
             data['cursor'] = cursor
@@ -1457,7 +1457,7 @@ class CrossingMindsApiClient:
         user_id = self._userid2url(user_id)
         path = f'recommendation/users/{user_id}/items-properties/{item_property_name}/'
         params = {}
-        if amt:
+        if amt is not None:
             params['amt'] = amt
         if skip_default_scenario is not None:
             params['skip_default_scenario'] = skip_default_scenario
@@ -1500,7 +1500,7 @@ class CrossingMindsApiClient:
         data = {}
         if user_id:
             data['user_id'] = user_id
-        if amt:
+        if amt is not None:
             data['amt'] = amt
         if skip_default_scenario is not None:
             data['skip_default_scenario'] = skip_default_scenario
@@ -1553,7 +1553,7 @@ class CrossingMindsApiClient:
             data['ratings'] = self._itemid2body(ratings)
         if user_properties:
             data['user_properties'] = user_properties
-        if amt:
+        if amt is not None:
             data['amt'] = amt
         if cursor:
             data['cursor'] = cursor
@@ -1600,7 +1600,7 @@ class CrossingMindsApiClient:
         data = {
             'context_items': context_items,
         }
-        if amt:
+        if amt is not None:
             data['amt'] = amt
         if cursor:
             data['cursor'] = cursor
@@ -1700,7 +1700,7 @@ class CrossingMindsApiClient:
         user_id = self._userid2url(user_id)
         path = f'users/{user_id}/ratings/'
         params = {}
-        if amt:
+        if amt is not None:
             params['amt'] = amt
         if page:
             params['page'] = page
@@ -1725,7 +1725,7 @@ class CrossingMindsApiClient:
         """
         path = f'ratings-bulk/'
         params = {}
-        if amt:
+        if amt is not None:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
@@ -1848,7 +1848,7 @@ class CrossingMindsApiClient:
         """
         path = f'interactions-bulk/'
         params = {}
-        if amt:
+        if amt is not None:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
@@ -1958,7 +1958,7 @@ class CrossingMindsApiClient:
         """
         path = f'sessions/interactions-bulk/'
         params = {}
-        if amt:
+        if amt is not None:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
