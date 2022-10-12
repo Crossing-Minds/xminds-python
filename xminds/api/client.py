@@ -216,96 +216,15 @@ class CrossingMindsApiClient:
 
     # === Login ===
 
-    def login_individual(self, email, password, db_id, frontend_user_id=None,
-                         frontend_session_id=None):
-        """
-        Login on a database with an account
-
-        :param str email:
-        :param str password:
-        :param str db_id:
-        :param ID? frontend_user_id: user ID
-        :param ID? frontend_session_id: anonymous session ID
-        :returns: {
-            'token': str,
-            'database': {
-                'id': str,
-                'name': str,
-                'description': str,
-                'item_id_type': str,
-                'user_id_type': str,
-                'session_id_type': str,
-            },
-            'warnings?': [str]
-        }
-        """
-        path = f'login/individual/'
-        data = {
-            'email': email,
-            'password': password,
-            'db_id': db_id,
-        }
-        if frontend_user_id is not None:
-            # cannot use `_userid2body` since we are not logged in yet
-            if isinstance(frontend_user_id, bytes) and self.b64_encode_bytes:
-                frontend_user_id = self._b64_encode(frontend_user_id)
-            data['frontend_user_id'] = frontend_user_id
-        if frontend_session_id is not None:
-            # cannot use `_sessionid2body` since we are not logged in yet
-            if isinstance(frontend_session_id, bytes) and self.b64_encode_bytes:
-                frontend_session_id = self._b64_encode(frontend_session_id)
-            data['frontend_session_id'] = frontend_session_id
-        return self._login(path, data)
-
-    def login_service(self, name, password, db_id, frontend_user_id=None,
-                      frontend_session_id=None):
-        """
-        Login on a database with a service account
-
-        :param str name:
-        :param str password:
-        :param str db_id:
-        :param ID? frontend_user_id: user ID
-        :param ID? frontend_session_id: anonymous session ID
-        :returns: {
-            'token': str,
-            'database': {
-                'id': str,
-                'name': str,
-                'description': str,
-                'item_id_type': str,
-                'user_id_type': str,
-                'session_id_type': str,
-            },
-            'warnings?': [str]
-        }
-        """
-        path = f'login/service/'
-        data = {
-            'name': name,
-            'password': password,
-            'db_id': db_id,
-        }
-        if frontend_user_id is not None:
-            # cannot use `_userid2body` since we are not logged in yet
-            if isinstance(frontend_user_id, bytes) and self.b64_encode_bytes:
-                frontend_user_id = self._b64_encode(frontend_user_id)
-            data['frontend_user_id'] = frontend_user_id
-        if frontend_session_id is not None:
-            # cannot use `_sessionid2body` since we are not logged in yet
-            if isinstance(frontend_session_id, bytes) and self.b64_encode_bytes:
-                frontend_session_id = self._b64_encode(frontend_session_id)
-            data['frontend_session_id'] = frontend_session_id
-        return self._login(path, data)
-
     def login_root(self, email, password):
         """
-        Login with the root account without selecting a database
-
-        :param str email:
-        :param str password:
-        :returns: {
+        [DEPRECATED] please use `login_individual` without `db_id`
+        :param email:
+        :param password:
+        :return: {
             'token': str,
+            'refresh_token': str,
+            'org_id': str,
             'warnings?': [str]
         }
         """
@@ -321,14 +240,108 @@ class CrossingMindsApiClient:
         self._refresh_token = None
         return resp
 
-    def login_refresh_token(self, refresh_token=None):
+    def login_individual(self, email, password, db_id=None, frontend_user_id=None,
+                         frontend_session_id=None):
+        """
+        Login on a database with an account
+
+        :param str email:
+        :param str password:
+        :param str? db_id:
+        :param ID? frontend_user_id: user ID
+        :param ID? frontend_session_id: anonymous session ID
+        :returns: {
+            'token': str,
+            'refresh_token': str,
+            `role`: str,
+            'org_id': str,
+            'database?': {
+                'id': str,
+                'name': str,
+                'description': str,
+                'item_id_type': str,
+                'user_id_type': str,
+                'session_id_type': str,
+            },
+            'warnings?': [str]
+        }
+        """
+        path = f'login/individual/'
+        data = {
+            'email': email,
+            'password': password,
+        }
+        if db_id is not None:
+            data['db_id'] = db_id
+        if frontend_user_id is not None:
+            # cannot use `_userid2body` since we are not logged in yet
+            if isinstance(frontend_user_id, bytes) and self.b64_encode_bytes:
+                frontend_user_id = self._b64_encode(frontend_user_id)
+            data['frontend_user_id'] = frontend_user_id
+        if frontend_session_id is not None:
+            # cannot use `_sessionid2body` since we are not logged in yet
+            if isinstance(frontend_session_id, bytes) and self.b64_encode_bytes:
+                frontend_session_id = self._b64_encode(frontend_session_id)
+            data['frontend_session_id'] = frontend_session_id
+        return self._login(path, data)
+
+    def login_service(self, name, password, db_id=None, frontend_user_id=None,
+                      frontend_session_id=None):
+        """
+        Login on a database with a service account
+
+        :param str name:
+        :param str password:
+        :param str? db_id:
+        :param ID? frontend_user_id: user ID
+        :param ID? frontend_session_id: anonymous session ID
+        :returns: {
+            'token': str,
+            'refresh_token': str,
+            `role`: str,
+            'org_id': str,
+            'database?': {
+                'id': str,
+                'name': str,
+                'description': str,
+                'item_id_type': str,
+                'user_id_type': str,
+                'session_id_type': str,
+            },
+            'warnings?': [str]
+        }
+        """
+        path = f'login/service/'
+        data = {
+            'name': name,
+            'password': password,
+        }
+        if db_id is not None:
+            data['db_id'] = db_id
+        if frontend_user_id is not None:
+            # cannot use `_userid2body` since we are not logged in yet
+            if isinstance(frontend_user_id, bytes) and self.b64_encode_bytes:
+                frontend_user_id = self._b64_encode(frontend_user_id)
+            data['frontend_user_id'] = frontend_user_id
+        if frontend_session_id is not None:
+            # cannot use `_sessionid2body` since we are not logged in yet
+            if isinstance(frontend_session_id, bytes) and self.b64_encode_bytes:
+                frontend_session_id = self._b64_encode(frontend_session_id)
+            data['frontend_session_id'] = frontend_session_id
+        return self._login(path, data)
+
+    def login_refresh_token(self, refresh_token=None, db_id=None):
         """
         Login again using a refresh token
 
         :param str? refresh_token: (default: self._refresh_token)
+        :param str? db_id:
         :returns: {
             'token': str,
-            'database': {
+            'refresh_token': str,
+            `role`: str,
+            'org_id': str,
+            'database?': {
                 'id': str,
                 'name': str,
                 'description': str,
@@ -344,13 +357,15 @@ class CrossingMindsApiClient:
         data = {
             'refresh_token': refresh_token
         }
+        if db_id:
+            data['db_id'] = db_id
         return self._login(path, data)
 
     def _login(self, path, data):
         resp = self.api.post(path=path, data=data)
         jwt_token = resp['token']
         self.set_jwt_token(jwt_token)
-        self._database = resp['database']
+        self._database = resp.get('database')
         self._refresh_token = resp['refresh_token']
         return resp
 
@@ -1379,8 +1394,8 @@ class CrossingMindsApiClient:
 
     @require_login
     def get_reco_users_group_to_items(self, users, consensus_factor=None, amt=None, cursor=None,
-                               scenario=None, filters=None, reranking=None,
-                               skip_default_scenario=None):
+                                      scenario=None, filters=None, reranking=None,
+                                      skip_default_scenario=None):
         """
         Get items recommendations given a list of users IDs.
 
