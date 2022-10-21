@@ -2262,7 +2262,7 @@ class CrossingMindsApiClient:
         among case|condition|ab_test, corresponding to the scenario type:
 
         :param str reco_type: accepted values
-            "item_to_items", "profile_to_items", "session_to_items"
+            "item_to_items", "profile_to_items", "session_to_items", "profile_to_item_properties"
         :param str name: name of the scenario
         :param dict scenario: a ``?`` in a key means the key is optional
             {
