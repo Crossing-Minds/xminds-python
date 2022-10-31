@@ -812,12 +812,34 @@ class CrossingMindsApiClient:
     @require_login
     def delete_user(self, user_id):
         """
+        Being deprecated; Use delete_user_props instead
+
+        Delete a single user;  doesn't wait for task completion
+
+        :param bytes user_id:
+        """
+        self.delete_user_props(user_id)
+
+    @require_login
+    def delete_user_props(self, user_id):
+        """
         Delete a single user;  doesn't wait for task completion
 
         :param bytes user_id:
         """
         user_id_url = self._userid2url(user_id)
-        self.api.delete(f'users/{user_id_url}')
+        self.api.delete(f'users/{user_id_url}/properties')
+
+    @require_login
+    def delete_user_all(self, user_id):
+        """
+        Delete everything related to a single user; doesn't wait for task completion
+        Note: This method is temporary and will be replaced by delete_user after its deprecation
+
+        :param bytes user_id:
+        """
+        user_id_url = self._userid2url(user_id)
+        self.api.delete(f'users/{user_id_url}/*')
 
     @require_login
     def delete_users(self, users_id):
