@@ -1919,7 +1919,7 @@ class CrossingMindsApiClient:
             'warnings?': [str],
         }
         """
-        path = f'sessions/interactions-bulk/'
+        path = f'sessions-interactions-bulk/'
         n_chunks = int(numpy.ceil(len(interactions) / chunk_size))
         sleep = chunk_size / 500
         warnings = []
@@ -1978,7 +1978,7 @@ class CrossingMindsApiClient:
         }
         :raises: RequestError if provided timeframe is invalid
         """
-        path = f'sessions/interactions-bulk/'
+        path = f'sessions-interactions-bulk/'
         params = {}
         if amt is not None:
             params['amt'] = amt
@@ -1990,6 +1990,56 @@ class CrossingMindsApiClient:
             params['end_timestamp'] = end_timestamp
         resp = self.api.get(path=path, params=params)
         resp['interactions'] = self._body2sessionid(self._body2itemid(resp['interactions']))
+        return resp
+
+    @require_login
+    def resolve_session(self, user_id, session_id, timestamp=None):
+        """
+        This endpoint allows you to resolve an anonymous session with a user.
+        Note: one user can have many anonymous sessions.
+
+        :param ID user_id:
+        :param ID session_id:
+        :param float? timestamp:
+        """
+        session_id = self._sessionid2url(session_id)
+        path = f'sessions/{session_id}/resolve/'
+        data = {'user_id': self._userid2body(user_id)}
+        if timestamp is not None:
+            data['timestamp'] = timestamp
+        _ = self.api.post(path=path, data=data)
+
+    @require_login
+    def list_resolved_sessions_by_users(self, users_id=None, amt=None, cursor=None):
+        """
+        List anonymous sessions resolved for a list of users.
+        The response being paginated, you control its size and offset
+        using the query parameters ``amt`` and ``cursor``.
+
+        :param ID-array? users_id:
+        :param int? amt:
+        :param str? cursor:
+        :return:{
+            'has_next': True,
+            'next_cursor": 'Q21vU1pHb1FjSEp...',
+            'resolved_sessions': [
+                {'session_id': 1234, 'user_id': '123e4567-e89b-12d3-a456-426614174000', 'timestamp': 1588812345},
+                {'session_id': 1234, 'user_id': 'c3391d83-553b-40e7-818e-fcf658ec397d', 'timestamp': 1588854321},
+                {'session_id': 333, 'user_id': 'c3391d83-553b-40e7-818e-fcf658ec397d', 'timestamp': 1588811111},
+            ]
+        }
+        """
+        path = f'resolved-sessions/'
+        data = {}
+        if users_id is not None:
+            data['users_id'] = self._userid2body(users_id)
+        if amt is not None:
+            data['amt'] = amt
+        if cursor is not None:
+            data['cursor'] = cursor
+        resp = self.api.post(path=path, data=data)
+        resp['resolved_sessions'] = self._body2sessionid(
+            self._body2userid(resp['resolved_sessions']))
         return resp
 
     # === Scheduled Background Tasks ===
