@@ -243,7 +243,10 @@ class CrossingMindsApiClient:
     def login_individual(self, email, password, db_id=None, frontend_user_id=None,
                          frontend_session_id=None):
         """
-        Login on a database with an account
+        Login on a database with an account.
+
+        When ``frontend_user_id`` and ``frontend_session_id`` are in the request it
+        will resolve the anonymous session.
 
         :param str email:
         :param str password:
@@ -288,7 +291,10 @@ class CrossingMindsApiClient:
     def login_service(self, name, password, db_id=None, frontend_user_id=None,
                       frontend_session_id=None):
         """
-        Login on a database with a service account
+        Login on a database with a service account.
+
+        When ``frontend_user_id`` and ``frontend_session_id`` are in the request it
+        will resolve the anonymous session.
 
         :param str name:
         :param str password:
