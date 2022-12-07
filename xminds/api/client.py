@@ -1136,7 +1136,7 @@ class CrossingMindsApiClient:
             self.api.patch(path=path, data=data, timeout=60)
 
     @require_login
-    def delete_item(self, item_id):
+    def delete_item_props(self, item_id):
         """
         Delete a single item;  doesn't wait for task completion
 
