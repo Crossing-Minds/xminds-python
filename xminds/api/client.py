@@ -20,6 +20,8 @@ from ..compat import tqdm
 from .apirequest import CrossingMindsApiJsonRequest, CrossingMindsApiPythonRequest
 from .exceptions import DuplicatedError, JwtTokenExpired, ServerError
 
+AUTO_FRONTEND_ID = None
+
 
 def require_login(method):
     @wraps(method)
@@ -840,7 +842,7 @@ class CrossingMindsApiClient:
     def delete_user_all(self, user_id):
         """
         Delete everything related to a single user; doesn't wait for task completion
-        Note: This method is temporary and will be replaced by delete_user after its deprecation
+        Note: This method is temporary and will be replaced by delete_user after its deprecation.
 
         :param bytes user_id:
         """
@@ -1348,6 +1350,9 @@ class CrossingMindsApiClient:
         """
         Get items recommendations given a user ID.
 
+        Note: replace `user_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
+
         :param ID user_id: user ID
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
@@ -1397,6 +1402,9 @@ class CrossingMindsApiClient:
         The table must be with ``LOCAL`` connection, have no compressions and have resource equal to
         ``USER_TO_ITEMS_RECO``.
         The table format must be indexed raw data file.
+
+        Note: replace `user_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
 
         :param ID user_id: user ID
         :param str? table: table name
@@ -1471,6 +1479,10 @@ class CrossingMindsApiClient:
             skip_default_scenario=None, filters=None, scenario=None):
         """
         Recommends item-property values given a user ID
+
+        Note: replace `user_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
+
         :param bytes user_id:
         :param str item_property_name:
         :param int? amt: (default 16)  maximal number of values to return from property `item_property_name`
@@ -1608,6 +1620,9 @@ class CrossingMindsApiClient:
         """
         Get items recommendations given a user ID and context items ID.
 
+        Note: replace `user_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
+
         :param array context_items: context items ID array with fields ['item_id': ID]
         :param ID user_id: user ID
         :param int? amt: amount to return (default: use the API default)
@@ -1655,6 +1670,9 @@ class CrossingMindsApiClient:
         If the rating exists for the tuple (user_id, item_id) then it is updated,
         otherwise it is created.
 
+        Note: replace `user_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
+
         :param ID user_id: user ID
         :param ID item_id: item ID
         :param float rating: rating value
@@ -1674,6 +1692,9 @@ class CrossingMindsApiClient:
     def create_or_update_user_ratings_bulk(self, user_id, ratings):
         """
         Create or update bulks of ratings for a single user and many items.
+
+        Note: replace `user_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
 
         :param ID user_id: user ID
         :param array ratings: ratings array with fields:
@@ -1713,6 +1734,9 @@ class CrossingMindsApiClient:
     def list_user_ratings(self, user_id, amt=None, page=None):
         """
         List the ratings of one user (paginated)
+
+        Note: replace `user_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
 
         :param ID user_id: user ID
         :param int? amt: amount of ratings by page (default: API default)
@@ -1766,6 +1790,9 @@ class CrossingMindsApiClient:
         """
         Delete a single rating for a given user.
 
+        Note: replace `user_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
+
         :param ID user_id: user ID
         :param ID item_id: item ID
         """
@@ -1778,6 +1805,9 @@ class CrossingMindsApiClient:
     def delete_user_ratings(self, user_id):
         """
         Delete all ratings of a given user.
+
+        Note: replace `user_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
 
         :param ID user_id: user ID
         """
@@ -1793,6 +1823,9 @@ class CrossingMindsApiClient:
         This endpoint allows you to create a new interaction for a user and an item.
         An inferred rating will be created or updated for the tuple (user_id, item_id).
         The taste profile of the user will then be updated in real-time by the online machine learning algorithm.
+
+        Note: replace `user_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
 
         :param ID user_id: user ID
         :param ID item_id: item ID
@@ -1840,11 +1873,15 @@ class CrossingMindsApiClient:
         Create a small bulk of interactions for a single user and many items.
         Inferred ratings will be created or updated for all tuples (user_id, item_id)
 
+        Note: replace `user_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
+
         :param ID user_id: user ID
         :param array interactions: interactions array with fields:
             ['item_id': ID, 'interaction_type': str, 'timestamp': float]
         :param int? chunk_size: split the requests in chunks of this size (default: 16_000)
         """
+        user_id = self._userid2url(user_id)
         path = f'users/{user_id}/interactions-bulk/'
         data = {
             'interactions': interactions,
@@ -1894,6 +1931,9 @@ class CrossingMindsApiClient:
     def create_session_interaction(self, session_id, item_id, interaction_type, timestamp=None):
         """
         This endpoint allows you to create a new interaction for an anonymous session and an item.
+
+        Note: replace `session_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
 
         :param ID session_id: anonymous session ID
         :param ID item_id: item ID
@@ -1945,6 +1985,9 @@ class CrossingMindsApiClient:
     def create_session_interactions_bulk(self, session_id, interactions):
         """
         Create a small bulk of interactions for a single anonymous session and many items.
+
+        Note: replace `session_id` with `AUTO_FRONTEND_ID` variable when call the method to use the
+        value inside the JWT. Only for FRONTEND role. For instance: `method(AUTO_FRONTEND_ID, ...)`
 
         :param ID session_id: anonymous session ID
         :param array interactions: interactions array with fields:
@@ -2490,6 +2533,8 @@ class CrossingMindsApiClient:
     def _id2url(self, data, field):
         """ base64 encode if needed """
         assert self._database is not None, f'You need to login to a database first'
+        if data is AUTO_FRONTEND_ID and field in ['user', 'session']:
+            return '~me'
         if self._database[f'{field}_id_type'].startswith('bytes'):
             return self._b64_encode(data)
         if isinstance(data, bytes):
