@@ -1245,7 +1245,7 @@ class CrossingMindsApiClient:
 
     @require_login
     def get_precomputed_reco_item_to_items(self, item_id, table=None, scenario=None,
-                                           skip_default_scenario=None):
+                                           skip_default_scenario=None, user_id=None, session_id=None):
         """
         Get similar items, from a file of precomputed recommendations (stored as a ``table``).
 
@@ -1257,6 +1257,10 @@ class CrossingMindsApiClient:
         :param str? table: table name
         :param str? scenario: scenario name
         :param bool? skip_default_scenario: Specify whether default scenario should by applied or skipped
+        :param ID? user_id: user ID. Only used in the context of an A/B test scenario to select the group A or B
+            and keep track of the respective group in analytics, NOT used to personalize recommendations
+        :param ID? session_id: session ID. Only used in the context of an A/B test scenario to select the group A or B
+            and keep track of the respective group in analytics, NOT used to personalize recommendations
         :returns: {
             'items_id': array of items IDs,
             'warnings?': [str],
@@ -1271,6 +1275,10 @@ class CrossingMindsApiClient:
             params['scenario'] = scenario
         if skip_default_scenario is not None:
             params['skip_default_scenario'] = skip_default_scenario
+        if user_id:
+            params['user_id'] = user_id
+        if session_id:
+            params['session_id'] = session_id
         return self.api.get(path=path, params=params)
 
     # === Reco: Session-to-item ===
