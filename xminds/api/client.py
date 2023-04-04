@@ -1826,7 +1826,8 @@ class CrossingMindsApiClient:
     # === User Interactions ===
 
     @require_login
-    def create_interaction(self, user_id, item_id, interaction_type, timestamp=None):
+    def create_interaction(self, user_id, item_id, interaction_type, timestamp=None,
+                           properties=None):
         """
         This endpoint allows you to create a new interaction for a user and an item.
         An inferred rating will be created or updated for the tuple (user_id, item_id).
@@ -1839,6 +1840,10 @@ class CrossingMindsApiClient:
         :param ID item_id: item ID
         :param str interaction_type: Interaction type
         :param float? timestamp: rating timestamp (default: now)
+        :param dict? properties: interaction properties {prop_name: prop_value)
+        :returns: {
+            'warnings': [str],
+        }
         """
         user_id = self._userid2url(user_id)
         item_id = self._itemid2url(item_id)
@@ -1848,6 +1853,8 @@ class CrossingMindsApiClient:
         }
         if timestamp is not None:
             data['timestamp'] = timestamp
+        if properties is not None:
+            data['properties'] = properties
         return self.api.post(path=path, data=data)
 
     @require_login
@@ -1857,23 +1864,28 @@ class CrossingMindsApiClient:
         Inferred ratings will be created or updated for all tuples (user_id, item_id).
 
         :param array interactions: interactions array with fields:
-            ['user_id': ID, 'item_id': ID, 'interaction_type': str, 'timestamp': float]
+            ['user_id': ID, 'item_id': ID, 'interaction_type': str, 'timestamp': float,
+             'properties?': nested numpy.ndarray with fields [prop_name: prop_value, ...] ]
         :param int? chunk_size: split the requests in chunks of this size (default: 16_000)
+        :returns: {
+            'warnings': [str],
+        }
         """
         path = f'interactions-bulk/'
         n_chunks = int(numpy.ceil(len(interactions) / chunk_size))
         sleep = chunk_size / 500
+        warnings = []
         for i in tqdm(range(n_chunks), disable=(True if n_chunks < 4 else None)):
             interactions_chunk = interactions[i*chunk_size:(i+1)*chunk_size]
             interactions_chunk = self._userid2body(self._itemid2body(interactions_chunk))
             data = {
                 'interactions': interactions_chunk,
             }
-            self.api.post(path=path, data=data, timeout=10)
+            resp = self.api.post(path=path, data=data, timeout=10)
+            warnings += [resp['warnings']]
             if n_chunks > 1:
                 time.sleep(sleep)
-
-        return
+        return {'warnings': warnings}
 
     @require_login
     def create_user_interactions_bulk(self, user_id, interactions):
@@ -1886,8 +1898,12 @@ class CrossingMindsApiClient:
 
         :param ID user_id: user ID
         :param array interactions: interactions array with fields:
-            ['item_id': ID, 'interaction_type': str, 'timestamp': float]
+            ['item_id': ID, 'interaction_type': str, 'timestamp': float,
+             'properties?': nested numpy.ndarray with fields [prop_name: prop_value, ...] ]
         :param int? chunk_size: split the requests in chunks of this size (default: 16_000)
+        :returns: {
+            'warnings': [str],
+        }
         """
         user_id = self._userid2url(user_id)
         path = f'users/{user_id}/interactions-bulk/'
@@ -1914,7 +1930,8 @@ class CrossingMindsApiClient:
             'has_next': bool,
             'next_cursor': str,
             'interactions': array with fields
-                ['item_id': ID, 'user_id': ID, 'interaction_type': str, 'timestamp': float]
+                ['item_id': ID, 'user_id': ID, 'interaction_type': str, 'timestamp': float,
+                 'properties?': nested numpy.ndarray with fields [prop_name: prop_value, ...] ]
             'warnings?': [str],
         }
         :raises: RequestError if provided timeframe is invalid
@@ -1936,7 +1953,8 @@ class CrossingMindsApiClient:
     # === Session Interactions ===
 
     @require_login
-    def create_session_interaction(self, session_id, item_id, interaction_type, timestamp=None):
+    def create_session_interaction(self, session_id, item_id, interaction_type, timestamp=None,
+                                   properties=None):
         """
         This endpoint allows you to create a new interaction for an anonymous session and an item.
 
@@ -1947,8 +1965,9 @@ class CrossingMindsApiClient:
         :param ID item_id: item ID
         :param str interaction_type: Interaction type
         :param float? timestamp: rating timestamp (default: now)
+        :param dict? properties:
         :returns: {
-            'warnings?': [str],
+            'warnings': [str],
         }
         """
         session_id = self._sessionid2url(session_id)
@@ -1959,6 +1978,8 @@ class CrossingMindsApiClient:
         }
         if timestamp is not None:
             data['timestamp'] = timestamp
+        if properties is not None:
+            data['properties'] = properties
         return self.api.post(path=path, data=data)
 
     @require_login
@@ -1967,10 +1988,11 @@ class CrossingMindsApiClient:
         Create or update large bulks of interactions for many anonymous session and many items.
 
         :param array interactions: interactions array with fields:
-            ['session_id': ID, 'item_id': ID, 'interaction_type': str, 'timestamp': float]
+            ['session_id': ID, 'item_id': ID, 'interaction_type': str, 'timestamp': float,
+             'properties?': numpy.ndarray ]
         :param int? chunk_size: split the requests in chunks of this size (default: 16_000)
         :returns: {
-            'warnings?': [str],
+            'warnings': [str],
         }
         """
         path = f'sessions-interactions-bulk/'
@@ -1999,7 +2021,8 @@ class CrossingMindsApiClient:
 
         :param ID session_id: anonymous session ID
         :param array interactions: interactions array with fields:
-            ['item_id': ID, 'interaction_type': str, 'timestamp': float]
+            ['item_id': ID, 'interaction_type': str, 'timestamp': float,
+             'properties?': nested numpy.ndarray with fields [prop_name: prop_value, ...] ]
         :param int? chunk_size: split the requests in chunks of this size (default: 16_000)
         :returns: {
             'warnings?': [str],
@@ -2030,7 +2053,8 @@ class CrossingMindsApiClient:
             'has_next': bool,
             'next_cursor': str,
             'interactions': array with fields
-                ['item_id': ID, 'session_id': ID, 'interaction_type': str, 'timestamp': float]
+                ['item_id': ID, 'session_id': ID, 'interaction_type': str, 'timestamp': float,
+                'properties?': nested numpy.ndarray with fields [prop_name: prop_value, ...] ]
             'warnings?': [str],
         }
         :raises: RequestError if provided timeframe is invalid
