@@ -974,7 +974,7 @@ class CrossingMindsApiClient:
         return resp
 
     @require_login
-    def list_items(self, items_id):
+    def list_items(self, items_id, properties=None):
         """
         Get multiple items given their IDs.
         The items in the response are not aligned with the input.
@@ -982,6 +982,7 @@ class CrossingMindsApiClient:
         Instead, the missing items are simply not present in the response.
 
         :param ID-array items_id: items IDs
+        :param list-of-str? properties: properties to return (default: all)
         :returns: {
             'items': array with fields ['id': ID, *<property_name: value_type>]
                 contains only the non-repeated values,
@@ -998,6 +999,8 @@ class CrossingMindsApiClient:
         items_id = self._itemid2body(items_id)
         path = f'items-bulk/list/'
         data = {'items_id': items_id}
+        if properties is not None:
+            data['properties'] = properties
         resp = self.api.post(path=path, data=data)
         resp['items'] = self._body2itemid(resp['items'])
         return resp
