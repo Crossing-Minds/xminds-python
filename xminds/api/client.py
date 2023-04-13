@@ -1953,6 +1953,35 @@ class CrossingMindsApiClient:
         resp['interactions'] = self._body2userid(self._body2itemid(resp['interactions']))
         return resp
 
+    @require_login
+    def list_user_interactions(
+            self, user_id, amt=None, cursor=None,
+    ):
+        """
+        List the interactions of one user
+
+        :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
+        :returns: {
+            'has_next': bool,
+            'next_cursor': str,
+            'interactions': array with fields
+                ['item_id': ID, 'interaction_type': str, 'timestamp': float,
+                 'properties?': nested numpy.ndarray with fields [prop_name: prop_value, ...] ]
+            'warnings?': [str],
+        }
+        """
+        user_id = self._userid2url(user_id)
+        path = f'users/{user_id}/interactions-bulk/'
+        params = {}
+        if amt is not None:
+            params['amt'] = amt
+        if cursor:
+            params['cursor'] = cursor
+        resp = self.api.get(path=path, params=params)
+        resp['interactions'] = self._body2itemid(resp['interactions'])
+        return resp
+
     # === Session Interactions ===
 
     @require_login
@@ -2077,6 +2106,35 @@ class CrossingMindsApiClient:
         return resp
 
     @require_login
+    def list_session_interactions(
+            self, session_id, amt=None, cursor=None,
+    ):
+        """
+        List the interactions of one anonymous session
+
+        :param ID session_id:
+        :param int? amt: amount to return (default: use the API default)
+        :param str? cursor: Pagination cursor
+        :returns: {
+            'has_next': bool,
+            'next_cursor': str,
+            'interactions': array with fields
+                ['item_id': ID, 'interaction_type': str, 'timestamp': float,
+                 'properties?': nested numpy.ndarray with fields [prop_name: prop_value, ...] ]
+            'warnings?': [str],
+        }
+        """
+        session_id = self._sessionid2url(session_id)
+        path = f'sessions/{session_id}/interactions-bulk/'
+        params = {}
+        if amt is not None:
+            params['amt'] = amt
+        if cursor:
+            params['cursor'] = cursor
+        resp = self.api.get(path=path, params=params)
+        resp['interactions'] = self._body2itemid(resp['interactions'])
+        return resp
+
     def resolve_session(self, user_id, session_id, timestamp=None):
         """
         This endpoint allows you to resolve an anonymous session with a user.
