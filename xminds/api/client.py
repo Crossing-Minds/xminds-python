@@ -1885,7 +1885,7 @@ class CrossingMindsApiClient:
                 'interactions': interactions_chunk,
             }
             resp = self.api.post(path=path, data=data, timeout=10)
-            warnings += [resp['warnings']]
+            warnings += [resp.get('warnings', [])]
             if n_chunks > 1:
                 time.sleep(sleep)
         return {'warnings': warnings}
