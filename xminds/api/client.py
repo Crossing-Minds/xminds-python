@@ -373,6 +373,7 @@ class CrossingMindsApiClient:
         resp = self.api.post(path=path, data=data)
         jwt_token = resp['token']
         self.set_jwt_token(jwt_token)
+        self._org_id = resp.get('org_id')
         self._database = resp.get('database')
         self._refresh_token = resp['refresh_token']
         return resp
