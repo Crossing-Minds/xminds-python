@@ -96,7 +96,7 @@ def _deep_hash_update(h, value):
     elif isinstance(value, bytes):
         h.update(value)
     elif isinstance(value, str):
-        h.update(value.encode('latin1'))
+        h.update(value.encode('utf8'))
     elif isinstance(value, (int, float, numpy.number, numpy.dtype)):
         h.update(str(value).encode('ascii'))
     elif isinstance(value, dict):
