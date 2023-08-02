@@ -2211,9 +2211,9 @@ class CrossingMindsApiClient:
     @require_login
     def get_background_tasks(self, task_name, page=None, amt=None):
         """
-        List currently running background tasks such as ML models training.
+        List recent background tasks such as ML models training.
 
-        :param str task_name: names allowed ``ml_model_retrain``,
+        :param str task_name: names allowed are ``ml_model_retrain``,
         ``item_popularity_score_recalibrate``, ``ml_new_users``, ``ml_new_items``
         :param int? page: page number (default: 1)
         :param int? amt: amount of tasks by page (default: 50)
