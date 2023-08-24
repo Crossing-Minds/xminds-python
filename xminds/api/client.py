@@ -55,14 +55,18 @@ class CrossingMindsApiClient:
     # === Account ===
 
     @require_login
-    def create_individual_account(self, first_name, last_name, email, password, role='backend'):
+    def create_individual_account(self, first_name, last_name, email, password=None,
+                                  role='backend', metadata=None, email_redirect_url=None):
         """
         Create a new individual account
 
         :param str first_name:
         :param str last_name:
         :param str email:
-        :param str password:
+        :param str? password:
+        :param str? role:
+        :param dict? metadata:
+        :param str? email_redirect_url:
         :returns: {'id': str, 'warnings?': [str]}
         """
         path = f'accounts/individual/'
@@ -70,14 +74,19 @@ class CrossingMindsApiClient:
             'first_name': first_name,
             'last_name': last_name,
             'email': email,
-            'password': password,
             'role': role,
         }
+        if password is not None:
+            data['password'] = password
+        if metadata is not None:
+            data['metadata'] = metadata
+        if email_redirect_url is not None:
+            data['email_redirect_url'] = email_redirect_url
         return self.api.post(path=path, data=data)
 
     @require_login
     def partial_update_individual_account(
-            self, email, password=None, first_name=None, last_name=None):
+            self, email, password=None, first_name=None, last_name=None, metadata=None):
         """
         Update the password or other editable property of an individual account,
         identified by an email.
@@ -87,6 +96,7 @@ class CrossingMindsApiClient:
         :param str? password:
         :param str? first_name:
         :param str? last_name:
+        :param dict? metadata:
         :returns: {'warnings?': [str]}
         """
         path = f'accounts/individual/'
@@ -96,70 +106,94 @@ class CrossingMindsApiClient:
         if password:
             data['password'] = password
         if first_name:
-            data['first_name'] = first_name,
+            data['first_name'] = first_name
         if last_name:
-            data['last_name'] = last_name,
+            data['last_name'] = last_name
+        if metadata is not None:
+            data['metadata'] = metadata
         return self.api.patch(path=path, data=data)
 
     @require_login
-    def create_service_account(self, name, password, role='frontend'):
+    def create_service_account(self, name, password=None, role='frontend', metadata=None):
         """
         Create a new service account
 
         :param str name:
-        :param str password:
+        :param str? password:
         :param str? role:
+        :param dict? metadata:
         :returns: {'id': str, 'warnings?': [str]}
         """
         path = f'accounts/service/'
         data = {
             'name': name,
-            'password': password,
             'role': role,
         }
+        if password is not None:
+            data['password'] = password
+        if metadata is not None:
+            data['metadata'] = metadata
         return self.api.post(path=path, data=data)
 
     @require_login
-    def partial_update_service_account(self, name, password):
+    def create_service_account_key(self, name, expiration_timestamp=None, metadata=None):
         """
-        Update the password or other editable property of an existing service account,
-        identified by a service name.
-        Editable properties not provided will not be modified.
+        Create a new service account key
 
         :param str name:
-        :param str password:
-        :returns: {'warnings?': [str]}
+        :param float? expiration_timestamp:
+        :param dict? metadata:
+        :returns: {'id': str, 'warnings?': [str]}
         """
-        path = f'accounts/service/'
+        path = f'accounts/service/keys/'
+        data = {'name': name}
+        if expiration_timestamp is not None:
+            data['expiration_timestamp'] = expiration_timestamp
+        if metadata is not None:
+            data['metadata'] = metadata
+        return self.api.post(path=path, data=data)
+
+    @require_login
+    def delete_service_account_key(self, key_id):
+        """
+        delete a service account key
+
+        :param str key_id:
+        """
+        path = f'accounts/service/keys/{key_id}/'
+        return self.api.delete(path=path)
+
+    def send_reset_password_email(self, email, email_redirect_url):
+        """
+        Send password request code by email
+
+        :param str email:
+        :param str email_redirect_url:
+        """
+        path = 'accounts/individual/send-reset-password-email/'
         data = {
-            'name': name,
-            'password': password
+            'email': email,
+            'email_redirect_url': email_redirect_url
         }
-        return self.api.patch(path=path, data=data)
+        return self.api.post(path=path, data=data)
 
-    def resend_verification_code(self, email):
+    def set_or_reset_password(self, email, new_password, code, code_expiration_timestamp):
         """
-        Resend the verification code to the account email
+        reset the password of an individual account using a code.
 
         :param str email:
-        """
-        path = f'accounts/resend-verification-code/'
-        return self.api.put(path=path, data={'email': email})
-
-    def verify_account(self, code, email):
-        """
-        Verify the email of an account by entering the verification code
-
+        :param str new_password:
         :param str code:
-        :param str email:
-        :returns: {'verified': bool, 'email': str, 'warnings?': [str]}
+        :param float code_expiration_timestamp:
         """
-        path = f'accounts/verify/'
+        path = f'accounts/individual/reset/'
         data = {
             'code': code,
             'email': email,
+            'new_password': new_password,
+            'code_expiration_timestamp': code_expiration_timestamp
         }
-        return self.api.get(path=path, params=data)
+        return self.api.post(path=path, data=data)
 
     @require_login
     def list_accounts(self):
@@ -180,6 +214,13 @@ class CrossingMindsApiClient:
                 {
                     'name': str,
                     'role': str,
+                    'keys' [
+                        {
+                            'id': 'aeF32..',
+                            'created_timestamp': 12341234.4,
+                            'metadata': {'description': 'key for test'}
+                        }
+                    ]
                 },
             ],
             'warnings?': [str]
@@ -215,6 +256,44 @@ class CrossingMindsApiClient:
             'name': name,
         }
         return self.api.delete(path=path, data=data)
+
+    @require_login
+    def create_service_account_key(self, name, expiration_timestamp=None, metadata=None):
+        """
+        Create a service account key
+
+        :param str name: Service name
+        :param float? expiration_timestamp:
+        :param dict? metadata:
+        :return {
+            'id': 'aeF32..',
+            'key': 'UB8gW9zxuV9D',
+            'created_timestamp': 12341234.4,
+            'expire_timestamp': 12345234.4,
+            'metadata': {'description': 'key for test'}
+        }
+        :raises: NotFoundError
+        """
+        path = 'accounts/service/keys/'
+        data = {
+            'name': name,
+        }
+        if expiration_timestamp is not None:
+            data['expiration_timestamp'] = expiration_timestamp
+        if metadata is not None:
+            data['metadata'] = metadata
+        return self.api.post(path=path, data=data)
+
+    @require_login
+    def delete_service_account_key(self, key_id):
+        """
+        Delete a service account key
+
+        :param str key_id:
+        :raises: NotFoundError
+        """
+        path = f'accounts/service/keys/{key_id}/'
+        return self.api.delete(path=path)
 
     # === Login ===
 
