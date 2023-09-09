@@ -2035,13 +2035,15 @@ class CrossingMindsApiClient:
 
     @require_login
     def list_user_interactions(
-            self, user_id, amt=None, cursor=None,
+            self, user_id, amt=None, cursor=None, interaction_types=None
     ):
         """
         List the interactions of one user
 
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
+        :param list-of-str? interaction_types: When provided, only retruns interactions
+            from those types
         :returns: {
             'has_next': bool,
             'next_cursor': str,
@@ -2058,6 +2060,8 @@ class CrossingMindsApiClient:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
+        if interaction_types:
+            params['interaction_types'] = interaction_types
         resp = self.api.get(path=path, params=params)
         resp['interactions'] = self._body2itemid(resp['interactions'])
         return resp
