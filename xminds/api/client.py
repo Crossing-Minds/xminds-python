@@ -55,15 +55,15 @@ class CrossingMindsApiClient:
     # === Account ===
 
     @require_login
-    def create_individual_account(self, first_name, last_name, email, password=None,
+    def create_individual_account(self, email, password=None, first_name=None, last_name=None,
                                   role='backend', metadata=None, email_redirect_url=None):
         """
         Create a new individual account
 
-        :param str first_name:
-        :param str last_name:
         :param str email:
         :param str? password:
+        :param str? first_name:
+        :param str? last_name:
         :param str? role:
         :param dict? metadata:
         :param str? email_redirect_url:
@@ -71,13 +71,15 @@ class CrossingMindsApiClient:
         """
         path = f'accounts/individual/'
         data = {
-            'first_name': first_name,
-            'last_name': last_name,
             'email': email,
             'role': role,
         }
         if password is not None:
             data['password'] = password
+        if first_name is not None:
+            data['first_name'] = first_name
+        if last_name is not None:
+            data['last_name'] = last_name
         if metadata is not None:
             data['metadata'] = metadata
         if email_redirect_url is not None:
