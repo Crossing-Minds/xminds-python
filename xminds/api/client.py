@@ -669,6 +669,7 @@ class CrossingMindsApiClient:
             'property_name': str,
             'value_type': str,
             'repeated': bool,
+            'indexed': bool,
             'warnings?': [str]
         }
         """
@@ -685,6 +686,7 @@ class CrossingMindsApiClient:
                 'property_name': str,
                 'value_type': str,
                 'repeated': bool,
+                'indexed': bool,
             }],
             'warnings?': [str]
         }
@@ -693,19 +695,21 @@ class CrossingMindsApiClient:
         return self.api.get(path=path)
 
     @require_login
-    def create_user_property(self, property_name, value_type, repeated=False):
+    def create_user_property(self, property_name, value_type, repeated=False, indexed=False):
         """
         Create a new user-property.
 
         :param str property_name: property name
         :param str value_type: property type
         :param bool? repeated: whether the property has many values (default: False)
+        :param bool? indexed: whether the property is indexed for filters (default: False)
         """
         path = f'users-properties/'
         data = {
             'property_name': property_name,
             'value_type': value_type,
             'repeated': repeated,
+            'indexed': indexed,
         }
         return self.api.post(path=path, data=data)
 
@@ -724,7 +728,7 @@ class CrossingMindsApiClient:
     @require_login
     def get_user(self, user_id):
         """
-        Get one user given its ID.
+        Get property values of one user given its ID.
 
         :param ID user_id: user ID
         :returns: {
@@ -736,7 +740,7 @@ class CrossingMindsApiClient:
         }
         """
         user_id = self._userid2url(user_id)
-        path = f'users/{user_id}/'
+        path = f'users/{user_id}/properties/'
         resp = self.api.get(path=path)
         resp['user']['user_id'] = self._body2userid(resp['user']['user_id'])
         return resp
@@ -744,7 +748,7 @@ class CrossingMindsApiClient:
     @require_login
     def list_users(self, users_id):
         """
-        Get multiple users given their IDs.
+        Get property values of multiple users given their IDs.
         The users in the response are not aligned with the input.
         In particular this endpoint does not raise NotFoundError if any user in missing.
         Instead, the missing users are simply not present in the response.
@@ -764,21 +768,23 @@ class CrossingMindsApiClient:
         }
         """
         users_id = self._userid2body(users_id)
-        path = f'users-bulk/list/'
+        path = f'users-bulk/properties/list/'
         data = {'users_id': users_id}
         resp = self.api.post(path=path, data=data)
         resp['users'] = self._body2itemid(resp['users'])
         return resp
 
     @require_login
-    def list_users_paginated(self, amt=None, cursor=None):
+    def list_users_paginated(self, amt=None, cursor=None, properties=None, filters=None):
         """
-        Get multiple users by page.
+        Get property values of multiple users by page.
         The response is paginated, you can control the response amount and offset
         using the query parameters ``amt`` and ``cursor``.
 
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
+        :param list-of-str? properties: properties to return (default: all)
+        :param list-of-str? filters: User-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
         :returns: {
             'users': array with fields ['id': ID, *<property_name: value_type>]
                 contains only the non-repeated values,
@@ -794,36 +800,42 @@ class CrossingMindsApiClient:
             'warnings?': [str],
         }
         """
-        path = f'users-bulk/'
+        path = f'users-bulk/properties/'
         params = {}
         if amt is not None:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
+        if properties:
+            params['properties'] = properties
+        if filters:
+            params['filters'] = self._clean_filters_to_urlsafe(filters)
         resp = self.api.get(path=path, params=params)
         resp['users'] = self._body2userid(resp['users'])
         return resp
 
     @require_login
-    def create_or_update_user(self, user):
+    def create_or_replace_user(self, user):
         """
-        Create a new user, or update it if the ID already exists.
+        Create property values for one user, or replace them if the ID already exists.
 
         :param dict user: user ID and properties {'user_id': ID, *<property_name: property_value>}
         """
         user = dict(user)
         user_id = self._userid2url(user.pop('user_id'))
-        path = f'users/{user_id}/'
+        path = f'users/{user_id}/properties/'
         data = {
             'user': user,
         }
         return self.api.put(path=path, data=data)
 
+    create_or_update_user = create_or_replace_user
+
     @require_login
-    def create_or_update_users_bulk(self, users, users_m2m=None, wait_for_completion=None,
-                                    chunk_size=(1 << 10)):
+    def create_or_replace_users_bulk(self, users, users_m2m=None, wait_for_completion=None,
+                                     chunk_size=(1 << 10)):
         """
-        Create many users in bulk, or update the ones for which the id already exist.
+        Create property values for many users in bulk, or update the ones for which the ID already exist.
 
         :param array users: array with fields ['id': ID, *<property_name: value_type>]
             contains only the non-repeated values,
@@ -837,7 +849,7 @@ class CrossingMindsApiClient:
         :param int? chunk_size: split the requests in chunks of this size (default: 1K)
         :param bool? wait_for_completion: (default: True)
         """
-        path = f'users-bulk/'
+        path = f'users-bulk/properties/'
         for users_chunk, users_m2m_chunk in self._chunk_users(users, users_m2m, chunk_size):
             data = {
                 'users': users_chunk,
@@ -847,10 +859,12 @@ class CrossingMindsApiClient:
                 data['wait_for_completion'] = wait_for_completion
             self.api.put(path=path, data=data, timeout=60)
 
+    create_or_update_users_bulk = create_or_replace_users_bulk
+
     @require_login
     def partial_update_user(self, user, create_if_missing=None):
         """
-        Partially update some properties of an user
+        Partially update some property values of one user.
 
         :param dict user: user ID and properties {'user_id': ID, *<property_name: property_value>}
         :param bool? create_if_missing: control whether an error should be returned or a new user
@@ -863,7 +877,7 @@ class CrossingMindsApiClient:
         """
         user = dict(user)
         user_id = self._userid2url(user.pop('user_id'))
-        path = f'users/{user_id}/'
+        path = f'users/{user_id}/properties/'
         data = {
             'user': user,
         }
@@ -875,7 +889,7 @@ class CrossingMindsApiClient:
     def partial_update_users_bulk(self, users, users_m2m=None, create_if_missing=None,
                                   chunk_size=(1 << 10)):
         """
-        Partially update some properties of many users.
+        Partially update some property values of many users.
 
         :param array users: array with fields ['id': ID, *<property_name: value_type>]
             contains only the non-repeated values,
@@ -890,7 +904,7 @@ class CrossingMindsApiClient:
             should be created when the ``user_id`` does not already exist. (default: False)
         :param int? chunk_size: split the requests in chunks of this size (default: 1K)
         """
-        path = f'users-bulk/'
+        path = f'users-bulk/properties/'
         data = {}
         if create_if_missing is not None:
             data['create_if_missing'] = create_if_missing
@@ -934,12 +948,13 @@ class CrossingMindsApiClient:
     @require_login
     def delete_users(self, users_id):
         """
-        Delete users; doesn't wait for task completion
+        Delete property values of many users in bulk. Ratings and interactions are not deleted.
+        Doesn't wait for task completion
 
         :param ID-array users_id: user IDs
         """
         data = {'users_id': self._userid2body(users_id)}
-        self.api.delete(path='users-bulk/', data=data)
+        self.api.delete(path='users-bulk/properties/', data=data)
 
     def _chunk_users(self, users, users_m2m, chunk_size):
         users_m2m = users_m2m or []
@@ -1038,7 +1053,7 @@ class CrossingMindsApiClient:
     @require_login
     def get_item(self, item_id):
         """
-        Get one item given its ID.
+        Get property values of one item given its ID.
 
         :param ID item_id: item ID
         :returns: {
@@ -1050,7 +1065,7 @@ class CrossingMindsApiClient:
         }
         """
         item_id = self._itemid2url(item_id)
-        path = f'items/{item_id}/'
+        path = f'items/{item_id}/properties/'
         resp = self.api.get(path=path)
         resp['item']['item_id'] = self._body2itemid(resp['item']['item_id'])
         return resp
@@ -1058,7 +1073,7 @@ class CrossingMindsApiClient:
     @require_login
     def list_items(self, items_id, properties=None):
         """
-        Get multiple items given their IDs.
+        Get property values of multiple items given their IDs.
         The items in the response are not aligned with the input.
         In particular this endpoint does not raise NotFoundError if any item in missing.
         Instead, the missing items are simply not present in the response.
@@ -1079,7 +1094,7 @@ class CrossingMindsApiClient:
         }
         """
         items_id = self._itemid2body(items_id)
-        path = f'items-bulk/list/'
+        path = f'items-bulk/properties/list/'
         data = {'items_id': items_id}
         if properties is not None:
             data['properties'] = properties
@@ -1088,16 +1103,18 @@ class CrossingMindsApiClient:
         return resp
 
     @require_login
-    def list_items_paginated(self, amt=None, cursor=None):
+    def list_items_paginated(self, amt=None, cursor=None, properties=None, filters=None):
         """
-        Get multiple items by page.
+        Get property values of multiple items by page.
         The response is paginated, you can control the response amount and offset
         using the query parameters ``amt`` and ``cursor``.
 
         :param int? amt: amount to return (default: use the API default)
         :param str? cursor: Pagination cursor
+        :param list-of-str? properties: properties to return (default: all)
+        :param list-of-str? filters: Item-property filters. Filter format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_VALUE>',...]
         :returns: {
-            'items': array with fields ['id': ID, *<property_name: value_type>]
+            'items': array with fields ['item_id': ID, *<property_name: value_type>]
                 contains only the non-repeated values,
             'items_m2m': dict of arrays for repeated values:
                 {
@@ -1111,27 +1128,31 @@ class CrossingMindsApiClient:
             'warnings?': [str],
         }
         """
-        path = f'items-bulk/'
+        path = f'items-bulk/properties/'
         params = {}
         if amt is not None:
             params['amt'] = amt
         if cursor:
             params['cursor'] = cursor
+        if properties:
+            params['properties'] = properties
+        if filters:
+            params['filters'] = self._clean_filters_to_urlsafe(filters)
         resp = self.api.get(path=path, params=params)
         resp['items'] = self._body2itemid(resp['items'])
         return resp
 
     @require_login
-    def create_or_update_item(self, item, wait_for_completion=None):
+    def create_or_replace_item(self, item, wait_for_completion=None):
         """
-        Create a new item, or update it if the ID already exists.
+        Create property values for one item, or replace them if the ID already exists.
 
         :param dict item: item ID and properties {'item_id': ID, *<property_name: property_value>}
         :param bool? wait_for_completion: (default: True)
         """
         item = dict(item)
         item_id = self._itemid2url(item.pop('item_id'))
-        path = f'items/{item_id}/'
+        path = f'items/{item_id}/properties/'
         data = {
             'item': item,
         }
@@ -1139,11 +1160,13 @@ class CrossingMindsApiClient:
             data['wait_for_completion'] = wait_for_completion
         return self.api.put(path=path, data=data)
 
+    create_or_update_item = create_or_replace_item
+
     @require_login
-    def create_or_update_items_bulk(self, items, items_m2m=None, wait_for_completion=None,
-                                    chunk_size=(1 << 10)):
+    def create_or_replace_items_bulk(self, items, items_m2m=None, wait_for_completion=None,
+                                     chunk_size=(1 << 10)):
         """
-        Create many items in bulk, or update the ones for which the id already exist.
+        Create property values for many items in bulk, or replace the ones for which the ID already exist.
 
         :param array items: array with fields ['id': ID, *<property_name: value_type>]
             contains only the non-repeated values,
@@ -1157,7 +1180,7 @@ class CrossingMindsApiClient:
         :param bool? wait_for_completion: (default: True)
         :param int? chunk_size: split the requests in chunks of this size (default: 1000)
         """
-        path = f'items-bulk/'
+        path = f'items-bulk/properties/'
         for items_chunk, items_m2m_chunk in self._chunk_items(items, items_m2m, chunk_size):
             data = {
                 'items': items_chunk,
@@ -1167,10 +1190,12 @@ class CrossingMindsApiClient:
                 data['wait_for_completion'] = wait_for_completion
             self.api.put(path=path, data=data, timeout=60)
 
+    create_or_update_items_bulk = create_or_replace_items_bulk
+
     @require_login
     def partial_update_item(self, item, create_if_missing=None):
         """
-        Partially update some properties of an item.
+        Partially update some property values of one item.
 
         :param dict item: item ID and properties {'item_id': ID, *<property_name: property_value>}
         :param bool? create_if_missing: control whether an error should be returned or a new item
@@ -1183,7 +1208,7 @@ class CrossingMindsApiClient:
         """
         item = dict(item)
         item_id = self._itemid2url(item.pop('item_id'))
-        path = f'items/{item_id}/'
+        path = f'items/{item_id}/properties/'
         data = {
             'item': item,
         }
@@ -1195,7 +1220,7 @@ class CrossingMindsApiClient:
     def partial_update_items_bulk(self, items, items_m2m=None, create_if_missing=None,
                                   chunk_size=(1 << 10), wait_for_completion=None):
         """
-        Partially update some properties of many items.
+        Partially update some property values of many items.
 
         :param array items: array with fields ['id': ID, *<property_name: value_type>]
             contains only the non-repeated values,
@@ -1211,7 +1236,7 @@ class CrossingMindsApiClient:
         :param int? chunk_size: split the requests in chunks of this size (default: 1000)
         :param bool? wait_for_completion: (default: True)
         """
-        path = f'items-bulk/'
+        path = f'items-bulk/properties/'
         data = {}
         if create_if_missing is not None:
             data['create_if_missing'] = create_if_missing
@@ -1225,22 +1250,24 @@ class CrossingMindsApiClient:
     @require_login
     def delete_item_props(self, item_id):
         """
-        Delete a single item;  doesn't wait for task completion
+        Delete the property values of one item given its ID. Ratings and interactions are not deleted.
+        Doesn't wait for task completion.
 
         :param bytes item_id:
         """
         item_id_url = self._itemid2url(item_id)
-        self.api.delete(path=f'items/{item_id_url}/')
+        self.api.delete(path=f'items/{item_id_url}/properties/')
 
     @require_login
     def delete_items(self, items_id):
         """
-        Delete items; doesn't wait for task completion
+        Delete the property values of many items in bulk. Ratings and interactions are not deleted.
+        Doesn't wait for task completion
 
         :param ID-array items_id: items IDs
         """
         data = {'items_id': self._itemid2body(items_id)}
-        self.api.delete(path='items-bulk/', data=data)
+        self.api.delete(path='items-bulk/properties/', data=data)
 
     def _chunk_items(self, items, items_m2m, chunk_size):
         items_m2m = items_m2m or []
@@ -2824,6 +2851,8 @@ class CrossingMindsApiClient:
                     v = f['value']
                     if isinstance(v, dict):
                         raise TypeError('Advanced filtering features are reserved to scenarios')
+                    if isinstance(v, list):
+                        v = ','.join(str(x) for x in v)
                     _f += f':{v}'
             else:
                 raise TypeError(
