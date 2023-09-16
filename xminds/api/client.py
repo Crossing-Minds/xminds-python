@@ -511,7 +511,7 @@ class CrossingMindsApiClient:
 
     @require_login
     def create_database(self, name, description, item_id_type, user_id_type, session_id_type=None,
-                        item_filter_cache_expiration=None):
+                        core_config=None, metadata=None):
         """
         Create a new database
 
@@ -521,6 +521,8 @@ class CrossingMindsApiClient:
         :param str user_id_type: User ID type
         :param str? session_id_type: Anonymous Session ID type
         :param float? item_filter_cache_expiration: Refresh cache time of items filters (in seconds)
+        :param dict? core_config: Internal config
+        :param dict? metadata: Extra meta data, as unvalidated JSON
         :returns: {'id': str, 'warnings?': str}
         """
         path = f'databases/'
@@ -530,10 +532,12 @@ class CrossingMindsApiClient:
             'item_id_type': item_id_type,
             'user_id_type': user_id_type,
         }
-        if item_filter_cache_expiration:
-            data['item_filter_cache_expiration'] = item_filter_cache_expiration
         if session_id_type:
             data['session_id_type'] = session_id_type
+        if core_config is not None:
+            data['core_config'] = core_config
+        if metadata is not None:
+            data['metadata'] = metadata
         return self.api.post(path=path, data=data)
 
     @require_login
@@ -584,6 +588,7 @@ class CrossingMindsApiClient:
                 'user': int,
                 'item': int,
             },
+            'core_config': {**key: val},
             'metadata': {**any-key: any-val},
             'warnings?': [str]
         }
@@ -592,10 +597,12 @@ class CrossingMindsApiClient:
         return self.api.get(path=path)
 
     @require_login
-    def partial_update_database(self, description=None, metadata=None, preserve=None):
+    def partial_update_database(
+            self, description=None, core_config=None, metadata=None, preserve=None):
         """
         update description, and apply deep partial update of extra meta-data
         :param str? description: description of DB
+        :param dict? core_config: internal config
         :param dict? metadata: extra data to store structured as unvalidated JSON-compatible dict
         :param bool? preserve: set to `True` to append values instead of replace as in RFC7396
         """
@@ -604,6 +611,8 @@ class CrossingMindsApiClient:
         assert description is not None or metadata is not None
         if description is not None:
             data['description'] = description
+        if core_config is not None:
+            data['core_config'] = core_config
         if metadata is not None:
             data['metadata'] = metadata
         if preserve is not None:
@@ -611,19 +620,23 @@ class CrossingMindsApiClient:
         return self.api.patch(path=path, data=data)
 
     @require_login
-    def partial_update_database_preview(self, description=None, metadata=None, preserve=None):
+    def partial_update_database_preview(
+            self, description=None, core_config=None, metadata=None, preserve=None):
         """
         Preview deep partial update of extra data, without changing any state
         :param str? description: description of DB
+        :param dict? core_config: internal config
         :param dict? metadata: extra data to store structured as unvalidated JSON-compatible dict
         :param bool? preserve: set to `True` to append values instead of replace as in RFC7396
         :returns: {
             'metadata_old': {
                 'description': str,
+                'core_config': {**key: val},
                 'metadata': {**any-key: any-val},
             },
             'metadata_new': {
                 'description': str,
+                'core_config': {**key: val},
                 'metadata': {**any-key: any-val},
             },
             'warnings?': [str]
@@ -634,6 +647,8 @@ class CrossingMindsApiClient:
         assert description is not None or metadata is not None
         if description is not None:
             data['description'] = description
+        if core_config is not None:
+            data['core_config'] = core_config
         if metadata is not None:
             data['metadata'] = metadata
         if preserve is not None:
