@@ -608,7 +608,6 @@ class CrossingMindsApiClient:
         """
         path = f'databases/current/'
         data = {}
-        assert description is not None or metadata is not None
         if description is not None:
             data['description'] = description
         if core_config is not None:
