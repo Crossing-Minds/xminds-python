@@ -901,7 +901,7 @@ class CrossingMindsApiClient:
 
     @require_login
     def partial_update_users_bulk(self, users, users_m2m=None, create_if_missing=None,
-                                  chunk_size=(1 << 10)):
+                                  chunk_size=(1 << 10), wait_for_completion=None):
         """
         Partially update some property values of many users.
 
@@ -917,11 +917,14 @@ class CrossingMindsApiClient:
         :param bool? create_if_missing: to control whether an error should be returned or new users
             should be created when the ``user_id`` does not already exist. (default: False)
         :param int? chunk_size: split the requests in chunks of this size (default: 1K)
+        :param bool? wait_for_completion: (default: True)
         """
         path = f'users-bulk/properties/'
         data = {}
         if create_if_missing is not None:
             data['create_if_missing'] = create_if_missing
+        if wait_for_completion is not None:
+            data['wait_for_completion'] = wait_for_completion
         for users_chunk, users_m2m_chunk in self._chunk_users(users, users_m2m, chunk_size):
             data['users'] = users_chunk
             data['users_m2m'] = users_m2m_chunk
