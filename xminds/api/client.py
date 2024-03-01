@@ -1702,7 +1702,7 @@ class CrossingMindsApiClient:
     def get_reco_session_to_items_w_ctx_items(
             self, context_items, ratings=None, user_properties=None, amt=None, cursor=None,
             scenario=None, filters=None, reranking=None, exclude_rated_items=None,
-            skip_default_scenario=None):
+            skip_default_scenario=None, user_id=None, session_id=None, interactions=None):
         """
         Get items recommendations given the ratings of an anonymous session and context items ID.
 
@@ -1716,6 +1716,12 @@ class CrossingMindsApiClient:
         :param list-str? reranking: Item-property reranking. Format: ['<PROP_NAME>:<OPERATOR>:<OPTIONAL_WEIGHT>:<OPTIONS>']
         :param bool? exclude_rated_items: exclude rated items from response
         :param bool? skip_default_scenario: True to skip default scenario if any
+        :param ID? user_id: user ID. Only used in the context of an A/B test scenario to select the group A or B
+            and keep track of the respective group in analytics, NOT used to personalize recommendations
+        :param ID? session_id: Anonymous Session ID.
+        :param array? interactions: interactions to calculate ratings from.
+            Timestamp is optional and defaults to now.
+            ['item_id': ID, 'interaction_type': 'O' 'timestamp?': float]
         :returns: {
             'items_id': array of items IDs,
             'next_cursor': str, pagination cursor to use in next request to get more items,
@@ -1744,6 +1750,12 @@ class CrossingMindsApiClient:
             data['scenario'] = scenario
         if skip_default_scenario is not None:
             data['skip_default_scenario'] = skip_default_scenario
+        if user_id:
+            data['user_id'] = user_id
+        if session_id:
+            data['session_id'] = session_id
+        if interactions is not None:
+            data['interactions'] = interactions
         resp = self.api.post(path=path, data=data)
         resp['items_id'] = self._body2itemid(resp['items_id'])
         return resp
