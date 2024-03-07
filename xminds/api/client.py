@@ -198,6 +198,30 @@ class CrossingMindsApiClient:
         return self.api.post(path=path, data=data)
 
     @require_login
+    def login_jwt(self):
+        """
+        Verify login using JWT. Returns authentication context information.
+
+        :return: {
+            'org_id': str,
+            'account': {
+                'id': str,
+                'role': str,
+            },
+            'database?': {
+                'id': str,
+                'item_id_type': str,
+                'user_id_type': str,
+                'session_id_type': str
+            },
+            'frontend_user_id?': any,
+            'frontend_session_id?': any,
+        }
+        """
+        path = 'login/jwt/'
+        return self.api.post(path=path, data=None)
+
+    @require_login
     def list_accounts(self):
         """
         Get all accounts on the current organization
