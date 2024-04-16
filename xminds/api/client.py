@@ -1406,6 +1406,49 @@ class CrossingMindsApiClient:
         return resp
 
     @require_login
+    def get_reco_item_properties_to_items(
+            self, item_properties, amt=None,
+            scenario=None, filters=None, reranking=None,
+            skip_default_scenario=None,
+    ):
+        """
+        Get similar items using item properties.
+
+        :param dict item_properties: {**property_name: property_value(s)}
+        :param int? amt: amount to return (default: use the API default)
+        :param str? scenario: name of scenario
+        :param list-of-dict? filters: Item-property filters. Filter format:
+            [{'property_name': str, 'op': str , 'value?': any}]
+        :param list-of-dict? reranking: Item-property reranking. Format:
+            [{'property_name': str, 'op': str , 'weight': float, 'options': dict}]
+        :param bool? skip_default_scenario: True to skip default scenario if any
+        :returns: {
+            'items_id': array of items IDs,
+            'next_cursor': str, pagination cursor to use in next request to get more items,
+            'warnings?': [str],
+            'evaluated_scenarios': {
+                'runtime?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}],
+                'default?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}]
+            }
+        }
+        """
+        path = f'recommendation/items-properties/items/'
+        data = {'item_properties': item_properties}
+        if amt is not None:
+            data['amt'] = amt
+        if filters:
+            data['filters'] = filters
+        if reranking:
+            data['reranking'] = reranking
+        if scenario:
+            data['scenario'] = scenario
+        if skip_default_scenario is not None:
+            data['skip_default_scenario'] = skip_default_scenario
+        resp = self.api.post(path=path, data=data)
+        resp['items_id'] = self._body2itemid(resp['items_id'])
+        return resp
+
+    @require_login
     def get_precomputed_reco_item_to_items(self, item_id, table=None, scenario=None,
                                            skip_default_scenario=None, user_id=None, session_id=None):
         """
