@@ -98,11 +98,7 @@ class _BaseCrossingMindsApiRequest:
             raise ServerError(exc_payload)
         elif resp.status_code >= 400:
             data = self._parse_response(resp, fallback=True)
-            try:
-                exc = XMindsError.from_code(data.get('error_code', 0), data.get('error_data'))
-            except (KeyError, AttributeError, TypeError, ValueError):
-                exc = ServerError({'response': data})
-            raise exc
+            raise self._error_to_xminds_exc(data)
 
         data = self._parse_response(resp)
         return data
@@ -112,6 +108,13 @@ class _BaseCrossingMindsApiRequest:
 
     def _parse_response(self, response, fallback=False):
         raise NotImplementedError()
+
+    def _error_to_xminds_exc(self, data):
+        try:
+            exc = XMindsError.from_code(data.get('error_code', 0), data['error_data'])
+        except (KeyError, AttributeError, TypeError, ValueError):
+            exc = ServerError({'response': data})
+        return exc
 
     @staticmethod
     def _parse_token(headers):
