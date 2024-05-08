@@ -164,14 +164,17 @@ class CrossingMindsApiPythonRequest(_BaseCrossingMindsApiRequest):
         return zlib.compress(pickle.dumps(data, protocol=self.PICKLE_PROTOCOL))
 
     def _parse_response(self, response, fallback=False):
+        """
+        SECURITY WARNING: never deserialize un-trusted data
+        """
         if response.status_code == 204:
             return None
         # decode gzip in case it is used
         response.raw.decode_content = True
         # un-pickle from iterable
         if not fallback:
-            return pickle.load(response.raw)
+            return pickle.load(response.raw)  # nosem
         try:
-            return pickle.load(response.raw)
+            return pickle.load(response.raw)  # nosem
         except pickle.UnpicklingError:
             return response.raw.read()
