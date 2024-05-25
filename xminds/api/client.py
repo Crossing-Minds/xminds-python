@@ -1349,6 +1349,97 @@ class CrossingMindsApiClient:
                 items_m2m_chunk.append({'name': m2m['name'], 'array': array_chunk})
             yield self._itemid2body(items_chunk), items_m2m_chunk
 
+    # === Reco: *-to-item ===
+
+    @require_login
+    def get_reco_generic_to_items(
+            self, user_id=None, item_id=None, session_id=None, scenario=None,
+            skip_default_scenario=None, cursor=None, amt=None,
+            interactions=None, ratings=None, user_properties=None, item_properties=None,
+            context_items=None, filters=None, reranking=None, exclude_rated_items=None,
+            table=None
+    ):
+        """
+        Get items recommendations from any reco type.
+
+        :param ID? user_id: User ID. Used to personalize recommendations when the generic input
+        resolves to: profile_to_items, profile_to_items_w_ctx_items, precomputed_profile_to_items.
+        Otherwise used in the context of an A/B test scenario to select the group A or B and keep
+        track of the respective group in analytics.
+        :param ID? item_id: Item ID. Used to get similar items when the generic input
+        resolves to: item_to_items, precomputed_item_to_items
+        :param ID? session_id: Anonymous Session ID. Used to personalize recommendations when the
+        generic input resolves to: session_to_items, session_to_items_w_ctx_items.
+        Otherwise used in the context of an A/B test scenario to select the group A or B and
+        keep track of the respective group in analytics, when a user_id is not available.
+        :param str? scenario: name of scenario
+        :param bool? skip_default_scenario: True to skip default scenario if any
+        :param str? cursor: Pagination cursor
+        :param int? amt: amount to return (default: use the API default)
+        :param array? interactions: interactions to calculate ratings from.
+            Timestamp is optional and defaults to now.
+            ['item_id': ID, 'interaction_type': 'O' 'timestamp?': float]
+        :param array? ratings: ratings array with fields ['item_id': ID, 'rating': float]
+        :param dict? user_properties: user properties {**property_name: property_value(s)}
+        :param dict? item_properties: {**property_name: property_value(s)}
+        :param array? context_items: context items ID array with fields ['item_id': ID]
+        :param list-of-dict? filters: Item-property filters. Filter format:
+            [{'property_name': str, 'op': str , 'value?': any}]
+        :param list-of-dict? reranking: Item-property reranking. Format:
+            [{'property_name': str, 'op': str , 'weight': float, 'options': dict}]
+        :param bool? exclude_rated_items: exclude rated items from response
+        :param str? table: table name
+        :returns: {
+            'items_id': array of items IDs,
+            'next_cursor': str, pagination cursor to use in next request to get more items,
+            'warnings?': [str],
+            'evaluated_scenarios': {
+                'generic_runtime?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}],
+                'generic_default?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}],
+                'reco_type': str,
+                'runtime?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}],
+                'default?': [{'scenario_type': str, 'to?': str, 'scenario_name': str}]
+            }
+        }
+        """
+        path = f'recommendation/generic/items/'
+        data = {}
+        if amt is not None:
+            data['amt'] = amt
+        if cursor is not None:
+            data['cursor'] = cursor
+        if scenario is not None:
+            data['scenario'] = scenario
+        if skip_default_scenario is not None:
+            data['skip_default_scenario'] = skip_default_scenario
+        if user_id is not None:
+            data['user_id'] = self._userid2body(user_id)
+        if item_id is not None:
+            data['item_id'] = self._itemid2body(item_id)
+        if session_id is not None:
+            data['session_id'] = self._sessionid2body(session_id)
+        if filters is not None:
+            data['filters'] = filters
+        if reranking is not None:
+            data['reranking'] = reranking
+        if exclude_rated_items is not None:
+            data['exclude_rated_items'] = exclude_rated_items
+        if ratings is not None:
+            data['ratings'] = self._itemid2body(ratings)
+        if interactions is not None:
+            data['interactions'] = interactions
+        if user_properties is not None:
+            data['user_properties'] = user_properties
+        if item_properties is not None:
+            data['item_properties'] = item_properties
+        if context_items is not None:
+            data['context_items'] = context_items
+        if table:
+            data['table'] = table
+        resp = self.api.post(path=path, data=data)
+        resp['items_id'] = self._body2itemid(resp['items_id'])
+        return resp
+
     # === Reco: Item-to-item ===
 
     @require_login
